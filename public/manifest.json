@@ -1,0 +1,20 @@
+{
+  "name": "UVibe — UV Safety Australia",
+  "short_name": "UVibe",
+  "description": "Real-time UV index and sun safety for Australians",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#080a0f",
+  "theme_color": "#080a0f",
+  "orientation": "portrait",
+  "icons": [
+    { "src": "/icons/icon-256.png", "sizes": "256x256", "type": "image/png" },
+    { "src": "/icons/icon-512.png", "sizes": "512x512", "type": "image/png" },
+    {
+      "src": "/icons/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
+  ]
+}
