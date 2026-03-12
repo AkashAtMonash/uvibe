@@ -9,6 +9,7 @@
     "lint": "eslint"
   },
   "dependencies": {
+    "@ducanh2912/next-pwa": "^10.2.9",
     "@prisma/client": "^7.4.2",
     "axios": "^1.13.6",
     "fast-xml-parser": "^5.5.2",
