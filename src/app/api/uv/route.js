@@ -4,9 +4,8 @@ import { XMLParser } from "fast-xml-parser";
 const ARPANSA_URL = "https://uvdata.arpansa.gov.au/xml/uvvalues.xml";
 
 export async function GET(request) {
-  console.log("GET request received at /api/uv");
   const { searchParams } = new URL(request.url);
-  const city = searchParams.get("city")?.toLowerCase() ?? "melbourne";
+  const city = searchParams.get("city") ?? "Melbourne";
 
   const res = await fetch(ARPANSA_URL, { next: { revalidate: 300 } });
   if (!res.ok)
@@ -19,8 +18,10 @@ export async function GET(request) {
   });
   const data = parser.parse(xml);
 
-  const stations = data?.uvvalues?.location ?? [];
-  const match = stations.find((s) => s.id?.toLowerCase().includes(city));
+  const stations = data?.stations?.location ?? [];
+  const match = stations.find(
+    (s) => s.id?.toLowerCase() === city.toLowerCase(),
+  );
 
   if (!match)
     return NextResponse.json({ error: "City not found" }, { status: 404 });

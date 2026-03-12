@@ -1,65 +1,449 @@
-import Image from "next/image";
+"use client";
 
-export default function Home() {
+import { useState, useEffect, useCallback, useRef } from "react";
+import "@/app/globals.css";
+
+import { Sidebar, BottomNav } from "@/app/components/Nav";
+import LocationModal from "@/app/components/LocationModal";
+import APIBanner from "@/app/components/APIBanner";
+import UVRing from "@/app/components/UVRing";
+
+import {
+  CITIES,
+  UV_LEVELS,
+  getLevel,
+  calcBurn,
+  humanAlert,
+  getDynamicInterval,
+  nearestCity,
+  simulateUV,
+  buildForecast,
+} from "@/utils/uv";
+
+function HomePage({ city, setCity, prefs, geoGranted, onRequestGeo }) {
+  const [uv, setUv] = useState(0);
+  const [loading, setLoading] = useState(true);
+  const [apiStatus, setApiStatus] = useState(null);
+  const [time, setTime] = useState(null);
+  const [mounted, setMounted] = useState(false);
+  const timerRef = useRef(null);
+
+  const fetchUV = useCallback(async () => {
+    setLoading(true);
+    try {
+      const res = await fetch(
+        `/api/uv?city=${encodeURIComponent(CITIES[city]?.arpansa ?? "Melbourne")}`,
+      );
+      if (!res.ok) throw new Error();
+      const data = await res.json();
+      setUv(parseFloat(data.uv));
+      setApiStatus("ok");
+    } catch {
+      // TODO: remove simulated fallback once Open-Meteo is confirmed as official secondary source
+      try {
+        const c = CITIES[city];
+        const res = await fetch(
+          `https://api.open-meteo.com/v1/forecast?latitude=${c.lat}&longitude=${c.lon}&hourly=uv_index&timezone=auto&forecast_days=1`,
+        );
+        if (!res.ok) throw new Error();
+        const data = await res.json();
+        const hr = new Date().getHours();
+        setUv(
+          parseFloat(
+            (data.hourly?.uv_index?.[hr] ?? simulateUV(city)).toFixed(1),
+          ),
+        );
+        setApiStatus("fallback");
+      } catch {
+        setUv(simulateUV(city));
+        setApiStatus("error");
+      }
+    }
+    setLoading(false);
+  }, [city]);
+
+  useEffect(() => {
+    fetchUV();
+    timerRef.current = setInterval(fetchUV, 5 * 60 * 1000);
+    return () => clearInterval(timerRef.current);
+  }, [fetchUV]);
+
+  useEffect(() => {
+    setMounted(true);
+    setTime(new Date());
+    const t = setInterval(() => setTime(new Date()), 30000);
+    return () => clearInterval(t);
+  }, []);
+
+  const lv = getLevel(uv);
+  const burn = calcBurn(uv, prefs.skinType, prefs.spf);
+  const alert = humanAlert(uv, burn, city);
+  const interval = getDynamicInterval(uv);
+  const forecast = mounted ? buildForecast(city) : [];
+
+  const dateStr = time
+    ? time.toLocaleDateString("en-AU", {
+        weekday: "long",
+        day: "numeric",
+        month: "short",
+        year: "numeric",
+      })
+    : "";
+  const timeStr = time
+    ? time.toLocaleTimeString("en-AU", { hour: "2-digit", minute: "2-digit" })
+    : "";
+
   return (
-    <div className="flex min-h-screen items-center justify-center bg-zinc-50 font-sans dark:bg-black">
-      <main className="flex min-h-screen w-full max-w-3xl flex-col items-center justify-between py-32 px-16 bg-white dark:bg-black sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={100}
-          height={20}
-          priority
-        />
-        <div className="flex flex-col items-center gap-6 text-center sm:items-start sm:text-left">
-          <h1 className="max-w-xs text-3xl font-semibold leading-10 tracking-tight text-black dark:text-zinc-50">
-            To get started, edit the page.js file.
-          </h1>
-          <p className="max-w-md text-lg leading-8 text-zinc-600 dark:text-zinc-400">
-            Looking for a starting point or more instructions? Head over to{" "}
-            <a
-              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
+    <div className="pad fade-in">
+      <APIBanner status={apiStatus} />
+
+      <div className="hero fade-up" style={{ marginBottom: 14 }}>
+        <div className="hero-glass" />
+        <div className="hero-glow" style={{ background: lv.glow }} />
+
+        <div className="hero-body">
+          <div className="hero-location">
+            <select
+              className="city-select"
+              value={city}
+              onChange={(e) => setCity(e.target.value)}
+              aria-label="Select city"
             >
-              Templates
-            </a>{" "}
-            or the{" "}
-            <a
-              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
+              {Object.keys(CITIES).map((c) => (
+                <option key={c} value={c}>
+                  {c}
+                </option>
+              ))}
+            </select>
+            <span className="city-caret">▾</span>
+            <div className="hero-time">{timeStr}</div>
+            <button
+              className="geo-btn"
+              onClick={onRequestGeo}
+              aria-label="Detect location"
+              style={{
+                borderColor: geoGranted
+                  ? `${lv.color}60`
+                  : "var(--surface-border-strong)",
+                color: geoGranted ? lv.color : "var(--text-2)",
+                marginLeft: 8,
+              }}
             >
-              Learning
-            </a>{" "}
-            center.
-          </p>
-        </div>
-        <div className="flex flex-col gap-4 text-base font-medium sm:flex-row">
-          <a
-            className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-foreground px-5 text-background transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc] md:w-[158px]"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
+              {geoGranted ? "📍" : "🔍"}
+            </button>
+          </div>
+
+          <div
+            style={{
+              fontSize: 11,
+              fontFamily: "var(--mono)",
+              color: "var(--text-3)",
+              marginBottom: 28,
+              alignSelf: "flex-start",
+            }}
           >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={16}
-              height={16}
+            {dateStr} · {CITIES[city]?.state}
+          </div>
+
+          {loading ? (
+            <div
+              style={{
+                display: "flex",
+                flexDirection: "column",
+                alignItems: "center",
+                gap: 18,
+                padding: "40px 0",
+              }}
+            >
+              <div
+                className="spinner"
+                style={{
+                  width: 40,
+                  height: 40,
+                  color: lv.color,
+                  borderWidth: 3,
+                }}
+              />
+              <div
+                style={{
+                  fontSize: 11,
+                  color: "var(--text-3)",
+                  fontFamily: "var(--mono)",
+                }}
+              >
+                Contacting ARPANSA…
+              </div>
+            </div>
+          ) : (
+            <>
+              <div className="ring-wrap">
+                <div
+                  className="ring-pulse"
+                  style={{ background: lv.color, opacity: 0.1 }}
+                />
+                <UVRing uv={uv} color={lv.color} size={210} />
+              </div>
+
+              <div
+                className="alert-pill"
+                role="status"
+                aria-live="polite"
+                style={{
+                  background: lv.dim,
+                  borderColor: `${lv.color}40`,
+                  color: lv.color,
+                }}
+              >
+                {alert}
+              </div>
+
+              {burn && (
+                <div className="burn-row">
+                  <span style={{ color: lv.color }}>⏱</span>
+                  <span>
+                    Bare skin burns in <b>~{burn.bare} min</b> ·{" "}
+                    <b>{burn.prot} min</b> with SPF {prefs.spf}
+                  </span>
+                </div>
+              )}
+            </>
+          )}
+        </div>
+      </div>
+
+      <div className="cards">
+        <div className="card fade-up">
+          <div className="card-head">Hourly Forecast</div>
+          <div className="forecast-row" role="list">
+            {forecast.map((f, i) => (
+              <div
+                key={i}
+                role="listitem"
+                className={`fc-item ${f.now ? "now" : ""}`}
+                style={
+                  f.now
+                    ? {
+                        borderColor: `${f.lv.color}55`,
+                        background: `${f.lv.color}0e`,
+                      }
+                    : {}
+                }
+              >
+                <div className="fc-time">{f.label}</div>
+                <div className="fc-val" style={{ color: f.lv.color }}>
+                  {f.val}
+                </div>
+                <div className="fc-track">
+                  <div
+                    className="fc-fill"
+                    style={{
+                      width: `${Math.min(f.val / 13, 1) * 100}%`,
+                      background: f.lv.color,
+                    }}
+                  />
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        <div
+          className="interval-row fade-up"
+          style={{
+            borderColor: uv >= 6 ? `${lv.color}30` : "var(--surface-border)",
+          }}
+        >
+          <div
+            className="interval-icon"
+            style={{ background: lv.dim, borderColor: `${lv.color}40` }}
+          >
+            ⏰
+          </div>
+          <div>
+            <div className="interval-lbl" style={{ color: lv.color }}>
+              {interval.label}
+            </div>
+            <div className="interval-reason">{interval.reason}</div>
+          </div>
+        </div>
+
+        <div className="card fade-up">
+          <div className="card-head">UV Risk Scale</div>
+          <div className="scale-list" role="list">
+            {UV_LEVELS.map((level) => {
+              const active = uv >= level.min && uv <= level.max;
+              return (
+                <div
+                  key={level.name}
+                  role="listitem"
+                  className="scale-row"
+                  style={
+                    active
+                      ? {
+                          background: level.dim,
+                          borderColor: `${level.color}50`,
+                        }
+                      : {}
+                  }
+                >
+                  <div
+                    className="scale-dot"
+                    style={{
+                      background: level.color,
+                      boxShadow: active ? `0 0 7px ${level.color}` : "none",
+                    }}
+                  />
+                  <div className="scale-name" style={{ color: level.color }}>
+                    {level.name}
+                  </div>
+                  <div className="scale-range">
+                    {level.min}–{level.max === 99 ? "11+" : level.max}
+                  </div>
+                  <div className="scale-tip">{level.short}</div>
+                  {active && (
+                    <div
+                      className="scale-now"
+                      style={{ background: level.dim, color: level.color }}
+                    >
+                      NOW
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        </div>
+
+        <div
+          className="fade-up"
+          style={{ textAlign: "center", paddingBottom: 8 }}
+        >
+          <button
+            className="refresh-btn"
+            onClick={fetchUV}
+            disabled={loading}
+            aria-label="Refresh UV data"
+            style={{
+              color: lv.color,
+              borderColor: `${lv.color}55`,
+              boxShadow: loading ? "none" : `0 4px 20px ${lv.color}18`,
+            }}
+          >
+            {loading ? (
+              <>
+                <span className="spinner" />
+                Refreshing…
+              </>
+            ) : (
+              <>↻ Refresh</>
+            )}
+          </button>
+          <div className="attr">
+            UV observations courtesy of ARPANSA · Auto-refreshes every 5 min
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function BlankPage({ label }) {
+  return <div className="blank-page">{label.toUpperCase()} — COMING SOON</div>;
+}
+
+export default function Page() {
+  const [page, setPage] = useState("home");
+  const [city, setCity] = useState("Melbourne");
+  const [showModal, setShowModal] = useState(false);
+  const [geoGranted, setGeoGranted] = useState(false);
+  const [uv, setUv] = useState(0);
+  const [prefs] = useState({ skinType: "III", spf: 30 });
+
+  const lv = getLevel(uv);
+
+  useEffect(() => {
+    const saved = localStorage.getItem("uvibe_location");
+    if (saved) {
+      const { city: c, granted } = JSON.parse(saved);
+      setCity(c);
+      setGeoGranted(granted);
+    } else {
+      setShowModal(true);
+    }
+  }, []);
+
+  useEffect(() => {
+    document.documentElement.style.setProperty("--uv-color", lv.color);
+    document.documentElement.style.setProperty("--uv-dim", lv.dim);
+    document.documentElement.style.setProperty("--uv-glow", lv.glow);
+  }, [lv]);
+
+  const handleAllow = useCallback(() => {
+    setShowModal(false);
+    if (!navigator.geolocation) return;
+    navigator.geolocation.getCurrentPosition(
+      (pos) => {
+        const detected = nearestCity(pos.coords.latitude, pos.coords.longitude);
+        setCity(detected);
+        setGeoGranted(true);
+        localStorage.setItem(
+          "uvibe_location",
+          JSON.stringify({ city: detected, granted: true }),
+        );
+      },
+      () => {
+        setCity("Melbourne");
+        localStorage.setItem(
+          "uvibe_location",
+          JSON.stringify({ city: "Melbourne", granted: false }),
+        );
+      },
+    );
+  }, []);
+
+  const handleDeny = useCallback(() => {
+    setShowModal(false);
+    setCity("Melbourne");
+    localStorage.setItem(
+      "uvibe_location",
+      JSON.stringify({ city: "Melbourne", granted: false }),
+    );
+  }, []);
+
+  const ambientBg = `radial-gradient(ellipse 80% 50% at 50% -10%, ${lv.glow} 0%, transparent 60%)`;
+
+  return (
+    <div className="app">
+      <div className="app-ambient" style={{ background: ambientBg }} />
+
+      {showModal && <LocationModal onAllow={handleAllow} onDeny={handleDeny} />}
+
+      <Sidebar
+        page={page}
+        setPage={setPage}
+        city={city}
+        geoGranted={geoGranted}
+        uvColor={lv.color}
+        uvDim={lv.dim}
+      />
+
+      <div className="main">
+        <div className="scroll">
+          {page === "home" && (
+            <HomePage
+              city={city}
+              setCity={setCity}
+              prefs={prefs}
+              geoGranted={geoGranted}
+              onRequestGeo={() => setShowModal(true)}
             />
-            Deploy Now
-          </a>
-          <a
-            className="flex h-12 w-full items-center justify-center rounded-full border border-solid border-black/[.08] px-5 transition-colors hover:border-transparent hover:bg-black/[.04] dark:border-white/[.145] dark:hover:bg-[#1a1a1a] md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Documentation
-          </a>
+          )}
+          {page === "awareness" && <BlankPage label="Awareness" />}
+          {page === "prevention" && <BlankPage label="Prevention" />}
+          {page === "profile" && <BlankPage label="Settings" />}
         </div>
-      </main>
+        <BottomNav page={page} setPage={setPage} uvColor={lv.color} />
+      </div>
     </div>
   );
 }
