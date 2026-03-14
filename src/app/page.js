@@ -7,6 +7,11 @@ import { Sidebar, BottomNav } from "@/app/components/Nav";
 import LocationModal from "@/app/components/LocationModal";
 import APIBanner from "@/app/components/APIBanner";
 import UVRing from "@/app/components/UVRing";
+// import SunRayBackground from "@/app/components/SunRayBackground";
+import UVInfoBanner from "@/app/components/UVInfoBanner";
+import CitySearch from "@/app/components/CitySearch";
+
+import Prevention from "@/app/prevention/page";
 
 import {
   CITIES,
@@ -20,13 +25,22 @@ import {
   buildForecast,
 } from "@/utils/uv";
 
-function HomePage({ city, setCity, prefs, geoGranted, onRequestGeo }) {
+function HomePage({
+  city,
+  setCity,
+  prefs,
+  geoGranted,
+  onRequestGeo,
+  uvColor,
+  uvDim,
+}) {
   const [uv, setUv] = useState(0);
   const [loading, setLoading] = useState(true);
   const [apiStatus, setApiStatus] = useState(null);
   const [time, setTime] = useState(null);
   const [mounted, setMounted] = useState(false);
   const timerRef = useRef(null);
+  const uvSectionRef = useRef(null);
 
   const fetchUV = useCallback(async () => {
     setLoading(true);
@@ -80,7 +94,6 @@ function HomePage({ city, setCity, prefs, geoGranted, onRequestGeo }) {
   const alert = humanAlert(uv, burn, city);
   const interval = getDynamicInterval(uv);
   const forecast = mounted ? buildForecast(city) : [];
-
   const dateStr = time
     ? time.toLocaleDateString("en-AU", {
         weekday: "long",
@@ -93,43 +106,64 @@ function HomePage({ city, setCity, prefs, geoGranted, onRequestGeo }) {
     ? time.toLocaleTimeString("en-AU", { hour: "2-digit", minute: "2-digit" })
     : "";
 
+  const scrollToUV = () => {
+    uvSectionRef.current?.scrollIntoView({
+      behavior: "smooth",
+      block: "start",
+    });
+  };
+
   return (
     <div className="pad fade-in">
       <APIBanner status={apiStatus} />
 
-      <div className="hero fade-up" style={{ marginBottom: 14 }}>
+      <UVInfoBanner uvColor={uvColor} uvDim={uvDim} onCheckUV={scrollToUV} />
+
+      <div
+        className="hero fade-up"
+        style={{ marginBottom: 14 }}
+        ref={uvSectionRef}
+      >
         <div className="hero-glass" />
+        {/* <SunRayBackground color={lv.color} uv={uv} /> */}
         <div className="hero-glow" style={{ background: lv.glow }} />
 
         <div className="hero-body">
-          <div className="hero-location">
-            <select
-              className="city-select"
-              value={city}
-              onChange={(e) => setCity(e.target.value)}
-              aria-label="Select city"
-            >
-              {Object.keys(CITIES).map((c) => (
-                <option key={c} value={c}>
-                  {c}
-                </option>
-              ))}
-            </select>
-            <span className="city-caret">▾</span>
-            <div className="hero-time">{timeStr}</div>
+          <div
+            style={{
+              display: "flex",
+              alignItems: "center",
+              gap: 10,
+              width: "100%",
+              marginBottom: 6,
+            }}
+          >
+            <CitySearch
+              city={city}
+              setCity={setCity}
+              uvColor={uvColor}
+              geoGranted={geoGranted}
+              onRequestGeo={onRequestGeo}
+            />
             <button
               className="geo-btn"
               onClick={onRequestGeo}
-              aria-label="Detect location"
+              aria-label="Detect my location"
               style={{
                 borderColor: geoGranted
-                  ? `${lv.color}60`
+                  ? `${uvColor}60`
                   : "var(--surface-border-strong)",
-                color: geoGranted ? lv.color : "var(--text-2)",
-                marginLeft: 8,
+                color: geoGranted ? uvColor : "var(--text-2)",
+                padding: "10px 14px",
+                borderRadius: 14,
+                fontSize: 18,
+                lineHeight: 1,
+                background: geoGranted
+                  ? uvColor + "14"
+                  : "rgba(255,255,255,0.04)",
               }}
             >
-              {geoGranted ? "📍" : "🔍"}
+              📍
             </button>
           </div>
 
@@ -138,11 +172,14 @@ function HomePage({ city, setCity, prefs, geoGranted, onRequestGeo }) {
               fontSize: 11,
               fontFamily: "var(--mono)",
               color: "var(--text-3)",
-              marginBottom: 28,
+              marginBottom: 24,
               alignSelf: "flex-start",
             }}
           >
-            {dateStr} · {CITIES[city]?.state}
+            {dateStr}
+            {dateStr && " · "}
+            {CITIES[city]?.state}
+            {timeStr && ` · ${timeStr}`}
           </div>
 
           {loading ? (
@@ -347,6 +384,7 @@ function HomePage({ city, setCity, prefs, geoGranted, onRequestGeo }) {
   );
 }
 
+// TODO: replace with actual page components as Awareness, Prevention and Settings are built
 function BlankPage({ label }) {
   return <div className="blank-page">{label.toUpperCase()} — COMING SOON</div>;
 }
@@ -436,10 +474,12 @@ export default function Page() {
               prefs={prefs}
               geoGranted={geoGranted}
               onRequestGeo={() => setShowModal(true)}
+              uvColor={lv.color}
+              uvDim={lv.dim}
             />
           )}
           {page === "awareness" && <BlankPage label="Awareness" />}
-          {page === "prevention" && <BlankPage label="Prevention" />}
+          {page === "prevention" && <Prevention />}
           {page === "profile" && <BlankPage label="Settings" />}
         </div>
         <BottomNav page={page} setPage={setPage} uvColor={lv.color} />
