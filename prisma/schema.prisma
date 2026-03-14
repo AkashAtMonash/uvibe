@@ -1,14 +1,129 @@
-// This is your Prisma schema file,
-// learn more about it in the docs: https://pris.ly/d/prisma-schema
-
-// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
-// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+// prisma/schema.prisma
 
 generator client {
-  provider = "prisma-client"
-  output   = "../src/generated/prisma"
+  provider = "prisma-client-js"
 }
 
 datasource db {
   provider = "postgresql"
+}
+
+model User {
+  pushToken     String    @id @map("push_token")
+  displayName   String?   @map("display_name")
+  ageGroup      String?   @map("age_group")
+  skinType      String?   @map("skin_type")
+  spfPreference Int?      @map("spf_preference")
+  notifEnabled  Boolean   @default(true) @map("notif_enabled")
+  reminderTime  String?   @map("reminder_time")
+  createdAt     DateTime  @default(now()) @map("created_at")
+  updatedAt     DateTime  @updatedAt @map("updated_at")
+
+  subscriptions UserLocationSubscription[]
+  notifications Notification[]
+
+  @@map("user")
+}
+
+model Location {
+  locationId   Int      @id @default(autoincrement()) @map("location_id")
+  locationName String   @map("location_name")
+  latitude     Float
+  longitude    Float
+  postcode     String?
+  state        String?
+  country      String   @default("Australia")
+
+  uvReadings    UvReading[]
+  subscriptions UserLocationSubscription[]
+
+  @@map("location")
+}
+
+model UvRiskCategory {
+  riskCategoryId Int      @id @default(autoincrement()) @map("risk_category_id")
+  categoryName   String   @map("category_name")
+  minUv          Float    @map("min_uv")
+  maxUv          Float    @map("max_uv")
+  healthAdvice   String?  @map("health_advice")
+  colourHex      String?  @map("colour_hex")
+
+  uvReadings    UvReading[]
+
+  @@map("uv_risk_category")
+}
+
+model UvReading {
+  uvReadingId     Int            @id @default(autoincrement()) @map("uv_reading_id")
+  locationId      Int            @map("location_id")
+  riskCategoryId  Int            @map("risk_category_id")
+  readingDatetime DateTime       @map("reading_datetime")
+  uvIndex         Float          @map("uv_index")
+  dataSource      String?        @map("data_source")
+  createdAt       DateTime       @default(now()) @map("created_aat")
+
+  location      Location       @relation(fields: [locationId], references: [locationId])
+  riskCategory  UvRiskCategory @relation(fields: [riskCategoryId], references: [riskCategoryId])
+  notifications Notification[]
+
+  @@map("uv_reading")
+}
+
+model UserLocationSubscription {
+  subscriptionId Int      @id @default(autoincrement()) @map("subscription_id")
+  userId         String   @map("user_id")
+  locationId     Int      @map("location_id")
+  isActive       Boolean  @default(true) @map("is_active")
+  subscribedAt   DateTime @default(now()) @map("subscribed_at")
+
+  user       User       @relation(fields: [userId], references: [pushToken])
+  location   Location   @relation(fields: [locationId], references: [locationId])
+  alertRules AlertRule[]
+  notifications Notification[]
+
+  @@map("user_location_subscription")
+}
+
+model AlertRule {
+  ruleId            Int      @id @default(autoincrement()) @map("rule_id")
+  subscriptionId    Int      @map("subscription_id")
+  triggerUvThreshold Float   @map("trigger_uv_threshold")
+  alertType         String   @map("alert_type")
+  alertFrequency    String   @map("alert_frequency")
+  isEnabled         Boolean  @default(true) @map("is_enabled")
+  createdAt         DateTime @default(now()) @map("created_at")
+
+  subscription UserLocationSubscription @relation(fields: [subscriptionId], references: [subscriptionId])
+
+  @@map("alert_rule")
+}
+
+model Notification {
+  notificationId      Int      @id @default(autoincrement()) @map("notification_id")
+  userId              String   @map("user_id")
+  subscriptionId      Int      @map("subscription_id")
+  uvReadingId         Int      @map("uv_reading_id")
+  notificationType    String   @map("notification_type")
+  sentDatetime        DateTime @default(now()) @map("sent_datetime")
+  notificationTitle   String   @map("notification_title")
+  notificationMessage String   @map("notification_message")
+  deliveryStatus      String   @default("pending") @map("delivery_status")
+
+  user         User                     @relation(fields: [userId], references: [pushToken])
+  subscription UserLocationSubscription @relation(fields: [subscriptionId], references: [subscriptionId])
+  uvReading    UvReading                @relation(fields: [uvReadingId], references: [uvReadingId])
+
+  @@map("notification")
+}
+
+model SkinCancerStats {
+  statsId       Int     @id @default(autoincrement()) @map("stats_id")
+  year          Int
+  cancerType    String  @map("cancer_type")
+  newCases      Int     @map("new_cases")
+  incidenceRate Float   @map("incidence_rate")
+  gender        String
+  source        String?
+
+  @@map("skin_cancer_stats")
 }

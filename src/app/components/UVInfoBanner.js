@@ -1,5 +1,4 @@
 "use client";
-// src/components/UVInfoBanner.js
 
 import { useState, useEffect } from "react";
 

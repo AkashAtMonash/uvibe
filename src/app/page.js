@@ -1,5 +1,4 @@
 "use client";
-// src/app/page.js
 
 import { useState, useEffect, useCallback, useRef } from "react";
 import "@/app/globals.css";
@@ -11,6 +10,8 @@ import UVRing from "@/app/components/UVRing";
 // import SunRayBackground from "@/app/components/SunRayBackground";
 import UVInfoBanner from "@/app/components/UVInfoBanner";
 import CitySearch from "@/app/components/CitySearch";
+
+import Prevention from "@/app/prevention/page";
 
 import {
   CITIES,
@@ -478,7 +479,7 @@ export default function Page() {
             />
           )}
           {page === "awareness" && <BlankPage label="Awareness" />}
-          {page === "prevention" && <BlankPage label="Prevention" />}
+          {page === "prevention" && <Prevention />}
           {page === "profile" && <BlankPage label="Settings" />}
         </div>
         <BottomNav page={page} setPage={setPage} uvColor={lv.color} />

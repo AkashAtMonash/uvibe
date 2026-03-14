@@ -1,5 +1,4 @@
 "use client";
-// src/components/CitySearch.js
 
 import { useState, useRef, useEffect } from "react";
 import { CITIES } from "@/utils/uv";

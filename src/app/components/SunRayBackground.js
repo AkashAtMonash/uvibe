@@ -1,5 +1,4 @@
 "use client";
-// src/components/SunRayBackground.js
 
 export default function SunRayBackground({ color, uv }) {
   const intensity = Math.min(uv / 13, 1);
