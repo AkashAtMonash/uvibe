@@ -78,6 +78,8 @@ export default function HomePage({
   const [showNotifPanel, setShowNotifPanel] = useState(false);
   const [notifError, setNotifError] = useState(null);
   const [testResult, setTestResult] = useState(null);
+  const [lastUpdated, setLastUpdated] = useState(null); // timestamp of last successful UV fetch
+  const [uvFailed, setUvFailed] = useState(false); // true when all sources failed
 
   const fetchUV = useCallback(async () => {
     setLoading(true);
@@ -90,6 +92,8 @@ export default function HomePage({
       const uvVal = parseFloat(data.uv);
       setUv(uvVal);
       setApiStatus("ok");
+      setLastUpdated(new Date());
+      setUvFailed(false);
       onSaveReading?.(city, uvVal, "arpansa");
       onUVUpdate?.(uvVal);
     } catch {
@@ -107,11 +111,14 @@ export default function HomePage({
         );
         setUv(fallbackVal);
         setApiStatus("fallback");
+        setLastUpdated(new Date());
+        setUvFailed(false);
         onSaveReading?.(city, fallbackVal, "open-meteo");
         onUVUpdate?.(fallbackVal);
       } catch {
-        setUv(simulateUV(city));
+        // Do not overwrite last known UV with a simulation — user must know data is stale
         setApiStatus("error");
+        setUvFailed(true);
       }
     }
     setLoading(false);
@@ -467,36 +474,102 @@ export default function HomePage({
           color: "var(--fg-3)",
           letterSpacing: 1,
           marginBottom: 16,
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "space-between",
+          flexWrap: "wrap",
+          gap: 4,
         }}
       >
-        {dateStr}
-        {dateStr && " · "}
-        {CITIES[city]?.state}
-        {timeStr && ` · ${timeStr}`}
+        <span>
+          {dateStr}
+          {dateStr && " · "}
+          {CITIES[city]?.state}
+          {timeStr && ` · ${timeStr}`}
+        </span>
+        {lastUpdated && (
+          <span style={{ color: uvFailed ? "#ef4444" : "var(--fg-3)" }}>
+            {uvFailed ? "⚠ " : ""}UV updated{" "}
+            {lastUpdated.toLocaleTimeString("en-AU", {
+              hour: "2-digit",
+              minute: "2-digit",
+            })}
+          </span>
+        )}
       </div>
 
-      {/* ── API status ── */}
+      {/* ── Data status bar ── */}
       {apiStatus && apiStatus !== "ok" && (
         <div
-          className="api-banner"
-          style={{
-            background:
-              apiStatus === "fallback"
-                ? "rgba(245,158,11,0.08)"
-                : "rgba(239,68,68,0.08)",
-            borderColor:
-              apiStatus === "fallback"
-                ? "rgba(245,158,11,0.3)"
-                : "rgba(239,68,68,0.3)",
-            color: apiStatus === "fallback" ? "#f59e0b" : "#ef4444",
-            marginBottom: 14,
-          }}
           role="alert"
+          style={{
+            display: "flex",
+            alignItems: "flex-start",
+            gap: 10,
+            padding: "12px 14px",
+            borderRadius: "var(--r-sm)",
+            marginBottom: 14,
+            border: `1px solid ${apiStatus === "error" ? "rgba(239,68,68,0.35)" : "rgba(245,158,11,0.35)"}`,
+            background:
+              apiStatus === "error"
+                ? "rgba(239,68,68,0.07)"
+                : "rgba(245,158,11,0.07)",
+          }}
         >
-          <span>⚠</span>
-          {apiStatus === "fallback"
-            ? "ARPANSA offline — showing Open-Meteo forecast"
-            : "All UV feeds unavailable — showing estimate"}
+          <span style={{ fontSize: 16, flexShrink: 0 }}>
+            {apiStatus === "error" ? "⚠" : "⚡"}
+          </span>
+          <div style={{ flex: 1 }}>
+            {apiStatus === "error" ? (
+              <>
+                <div
+                  style={{
+                    fontSize: 12,
+                    fontWeight: 700,
+                    color: "#ef4444",
+                    marginBottom: 3,
+                  }}
+                >
+                  UV data unavailable — all sources offline
+                </div>
+                <div
+                  style={{
+                    fontSize: 11,
+                    color: "var(--fg-2)",
+                    lineHeight: 1.6,
+                  }}
+                >
+                  {lastUpdated
+                    ? `Showing last known reading from ${lastUpdated.toLocaleTimeString("en-AU", { hour: "2-digit", minute: "2-digit" })} on ${lastUpdated.toLocaleDateString("en-AU", { weekday: "short", day: "numeric", month: "short" })}. Do not rely on this value for sun safety decisions.`
+                    : "No UV data has been received this session. Do not assume UV is safe — check back when connected."}
+                </div>
+              </>
+            ) : (
+              <>
+                <div
+                  style={{
+                    fontSize: 12,
+                    fontWeight: 700,
+                    color: "#f59e0b",
+                    marginBottom: 3,
+                  }}
+                >
+                  ARPANSA offline — showing forecast data
+                </div>
+                <div
+                  style={{
+                    fontSize: 11,
+                    color: "var(--fg-2)",
+                    lineHeight: 1.6,
+                  }}
+                >
+                  {lastUpdated
+                    ? `Last updated ${lastUpdated.toLocaleTimeString("en-AU", { hour: "2-digit", minute: "2-digit" })} via Open-Meteo forecast. Values are predicted, not measured.`
+                    : "Displaying forecast data. Actual UV may differ from measured values."}
+                </div>
+              </>
+            )}
+          </div>
         </div>
       )}
 
