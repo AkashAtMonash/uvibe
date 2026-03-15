@@ -1,10 +1,12 @@
 "use client";
 
+import { Sun, LineChart, ShieldCheck, Settings, MapPin, Building2, SunMedium } from "lucide-react";
+
 const NAV_ITEMS = [
-  { id: "home", icon: "🌤", label: "Home", sub: "Live UV" },
-  { id: "awareness", icon: "📊", label: "Awareness", sub: "Data & Trends" },
-  { id: "prevention", icon: "🧴", label: "Prevention", sub: "SPF & Clothing" },
-  { id: "profile", icon: "⚙️", label: "Settings", sub: "Preferences" },
+  { id: "home", icon: Sun, label: "Home", sub: "Live UV" },
+  { id: "awareness", icon: LineChart, label: "Awareness", sub: "UV Map · AI Lab" },
+  { id: "prevention", icon: ShieldCheck, label: "Prevention", sub: "SPF & Clothing" },
+  { id: "profile", icon: Settings, label: "Settings", sub: "Preferences" },
 ];
 
 export function Sidebar({ page, setPage, city, geoGranted, uvColor, uvDim }) {
@@ -14,9 +16,9 @@ export function Sidebar({ page, setPage, city, geoGranted, uvColor, uvDim }) {
         <div className="sidebar-brand">
           <div
             className="brand-mark"
-            style={{ background: uvDim, boxShadow: `0 4px 20px ${uvDim}` }}
+            style={{ background: "#FFFFFF", color: uvColor, boxShadow: `0 4px 20px ${uvDim}` }}
           >
-            ☀️
+            <SunMedium size={26} strokeWidth={2.5} />
           </div>
           <div className="brand-text">
             <div className="brand-name">UVibe</div>
@@ -26,35 +28,43 @@ export function Sidebar({ page, setPage, city, geoGranted, uvColor, uvDim }) {
       </div>
 
       <nav className="sidebar-nav">
-        {NAV_ITEMS.map((item) => (
-          <button
-            key={item.id}
-            className={`nav-btn ${page === item.id ? "on" : ""}`}
-            style={
-              page === item.id
-                ? {
-                    background: uvDim,
-                    borderLeftColor: uvColor,
-                    color: uvColor,
-                  }
-                : {}
-            }
-            onClick={() => setPage(item.id)}
-            aria-current={page === item.id ? "page" : undefined}
-          >
-            <span className="nav-icon">{item.icon}</span>
-            <div>
-              <div className="nav-label">{item.label}</div>
-              <div className="nav-sub">{item.sub}</div>
-            </div>
-          </button>
-        ))}
+        {NAV_ITEMS.map((item) => {
+          const Icon = item.icon;
+          const isActive = page === item.id;
+          return (
+            <button
+              key={item.id}
+              className={`nav-btn ${isActive ? "on" : ""}`}
+              style={
+                isActive
+                  ? {
+                      background: uvDim,
+                      borderLeftColor: uvColor,
+                      color: uvColor,
+                    }
+                  : {}
+              }
+              onClick={() => setPage(item.id)}
+              aria-current={isActive ? "page" : undefined}
+            >
+              <span className="nav-icon" style={{ display: 'flex', justifyContent: 'center' }}>
+                <Icon size={20} strokeWidth={isActive ? 2.5 : 2} />
+              </span>
+              <div>
+                <div className="nav-label">{item.label}</div>
+                <div className="nav-sub">{item.sub}</div>
+              </div>
+            </button>
+          );
+        })}
       </nav>
 
       <div className="sidebar-foot">
         <div className="city-chip">
-          <span>{geoGranted ? "📍" : "🏙️"}</span>
-          <span>{city}</span>
+          <span style={{ display: 'flex', color: geoGranted ? uvColor : 'var(--text-2)' }}>
+            {geoGranted ? <MapPin size={14} /> : <Building2 size={14} />}
+          </span>
+          <span>{city?.name || city}</span>
         </div>
         <div className="foot-meta">
           UV data · ARPANSA
@@ -68,23 +78,29 @@ export function Sidebar({ page, setPage, city, geoGranted, uvColor, uvDim }) {
 export function BottomNav({ page, setPage, uvColor }) {
   return (
     <nav className="bottom-nav" aria-label="Main navigation">
-      {NAV_ITEMS.map((item) => (
-        <button
-          key={item.id}
-          className={`bnav-btn ${page === item.id ? "on" : ""}`}
-          style={page === item.id ? { color: uvColor } : {}}
-          onClick={() => setPage(item.id)}
-          aria-current={page === item.id ? "page" : undefined}
-          aria-label={item.label}
-        >
-          <span className="bnav-icon">{item.icon}</span>
-          <span className="bnav-label">{item.label}</span>
-          <div
-            className="bnav-pip"
-            style={{ background: uvColor, boxShadow: `0 0 8px ${uvColor}` }}
-          />
-        </button>
-      ))}
+      {NAV_ITEMS.map((item) => {
+        const Icon = item.icon;
+        const isActive = page === item.id;
+        return (
+          <button
+            key={item.id}
+            className={`bnav-btn ${isActive ? "on" : ""}`}
+            style={isActive ? { color: uvColor } : {}}
+            onClick={() => setPage(item.id)}
+            aria-current={isActive ? "page" : undefined}
+            aria-label={item.label}
+          >
+            <span className="bnav-icon" style={{ display: 'flex', marginBottom: 2 }}>
+              <Icon size={22} strokeWidth={isActive ? 2.5 : 2} />
+            </span>
+            <span className="bnav-label">{item.label}</span>
+            <div
+              className="bnav-pip"
+              style={{ background: uvColor, boxShadow: `0 0 8px ${uvColor}` }}
+            />
+          </button>
+        );
+      })}
     </nav>
   );
 }
