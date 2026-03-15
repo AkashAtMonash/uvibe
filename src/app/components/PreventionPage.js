@@ -1,5 +1,4 @@
 "use client";
-// src/components/PreventionPage.js
 
 import { useState, useEffect } from "react";
 import { CITIES, getLevel, simulateUV } from "@/utils/uv";

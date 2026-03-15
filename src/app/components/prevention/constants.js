@@ -279,3 +279,6 @@ export const PREV_TABS = [
   { id: "clothing", icon: "👕", label: "Clothing" },
   { id: "guide", icon: "📋", label: "Guide" },
 ];
+
+// Alias for backwards compatibility
+export const TABS = PREV_TABS;

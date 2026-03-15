@@ -1,5 +1,4 @@
 "use client";
-// src/components/HomePage.js
 
 import { useState, useEffect, useCallback, useRef } from "react";
 import UVRing from "./UVRing";

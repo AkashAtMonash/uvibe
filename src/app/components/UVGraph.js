@@ -1,5 +1,4 @@
 "use client";
-// src/components/UVGraph.js
 
 import { useState, useEffect, useRef } from "react";
 import { getLevel } from "@/utils/uv";
