@@ -1,7 +1,9 @@
 "use client";
+// src/components/HomePage.js
 
 import { useState, useEffect, useCallback, useRef } from "react";
 import UVRing from "./UVRing";
+import UVGraph from "./UVGraph";
 import CitySearch from "./CitySearch";
 import {
   CITIES,
@@ -62,6 +64,7 @@ export default function HomePage({
   onRequestGeo,
   onSaveReading,
   onNotifClick,
+  onUVUpdate,
 }) {
   const [uv, setUv] = useState(0);
   const [weather, setWeather] = useState(null);
@@ -84,6 +87,7 @@ export default function HomePage({
       setUv(uvVal);
       setApiStatus("ok");
       onSaveReading?.(city, uvVal, "arpansa");
+      onUVUpdate?.(uvVal);
     } catch {
       // TODO: remove simulation once Open-Meteo is confirmed as official fallback
       try {
@@ -100,6 +104,7 @@ export default function HomePage({
         setUv(fallbackVal);
         setApiStatus("fallback");
         onSaveReading?.(city, fallbackVal, "open-meteo");
+        onUVUpdate?.(fallbackVal);
       } catch {
         setUv(simulateUV(city));
         setApiStatus("error");
@@ -525,55 +530,8 @@ export default function HomePage({
         </div>
       ) : null}
 
-      {/* ── Hourly Forecast ── */}
-      <div className="anim-fade-up card" style={{ marginBottom: 14 }}>
-        <div className="divider-label label-sm">Hourly Forecast</div>
-        {forecast.length === 0 ? (
-          <div style={{ display: "flex", gap: 8 }}>
-            {Array(8)
-              .fill(0)
-              .map((_, i) => (
-                <div
-                  key={i}
-                  className="forecast-chip skeleton"
-                  style={{ minWidth: 52, height: 72 }}
-                />
-              ))}
-          </div>
-        ) : (
-          <div className="forecast-scroll" role="list">
-            {forecast.map((f, i) => (
-              <div
-                key={i}
-                role="listitem"
-                className={`forecast-chip ${f.now ? "now" : ""}`}
-                style={
-                  f.now
-                    ? {
-                        borderColor: `${f.lv.color}60`,
-                        background: `${f.lv.color}12`,
-                      }
-                    : {}
-                }
-              >
-                <div className="forecast-time">{f.label}</div>
-                <div className="forecast-uv-val" style={{ color: f.lv.color }}>
-                  {f.val}
-                </div>
-                <div className="forecast-bar-track">
-                  <div
-                    className="forecast-bar-fill"
-                    style={{
-                      width: `${Math.min(f.val / 13, 1) * 100}%`,
-                      background: f.lv.color,
-                    }}
-                  />
-                </div>
-              </div>
-            ))}
-          </div>
-        )}
-      </div>
+      {/* ── UV Graph ── */}
+      <UVGraph city={city} lv={lv} />
 
       {/* ── UV Risk Scale ── */}
       <div className="anim-fade-up card" style={{ marginBottom: 14 }}>

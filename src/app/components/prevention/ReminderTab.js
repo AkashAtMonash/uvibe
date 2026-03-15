@@ -1,5 +1,4 @@
 "use client";
-// src/app/components/prevention/ReminderTab.js
 
 import { useState, useEffect, useRef } from "react";
 
@@ -11,6 +10,8 @@ const INTERVALS = [
   { mins: 240, label: "4 hours", note: "Low UV" },
 ];
 
+const STORAGE_KEY = "uvibe_reminder";
+
 export default function ReminderTab({ lv, uv }) {
   const [interval, setInterval_] = useState(120);
   const [active, setActive] = useState(false);
@@ -18,14 +19,29 @@ export default function ReminderTab({ lv, uv }) {
   const [countdown, setCountdown] = useState(null);
   const timerRef = useRef(null);
 
-  const suggestedInterval =
+  const suggested =
     uv >= 11 ? 30 : uv >= 8 ? 60 : uv >= 6 ? 90 : uv >= 3 ? 120 : 240;
   const suggestedLabel =
-    suggestedInterval < 60
-      ? `${suggestedInterval} min`
-      : suggestedInterval === 60
+    suggested < 60
+      ? `${suggested} min`
+      : suggested === 60
         ? "1 hour"
-        : `${suggestedInterval / 60} hours`;
+        : `${suggested / 60} hours`;
+
+  // Restore persisted reminder state
+  useEffect(() => {
+    const saved = localStorage.getItem(STORAGE_KEY);
+    if (saved) {
+      const { nextAt: n, interval: i } = JSON.parse(saved);
+      if (n && n > Date.now()) {
+        setNextAt(n);
+        setInterval_(i);
+        setActive(true);
+      } else {
+        localStorage.removeItem(STORAGE_KEY);
+      }
+    }
+  }, []);
 
   useEffect(() => {
     if (!active || !nextAt) return;
@@ -34,6 +50,7 @@ export default function ReminderTab({ lv, uv }) {
       if (remaining <= 0) {
         setCountdown("Time to reapply!");
         setActive(false);
+        localStorage.removeItem(STORAGE_KEY);
       } else {
         const m = Math.floor(remaining / 60000);
         const s = Math.floor((remaining % 60000) / 1000);
@@ -43,68 +60,106 @@ export default function ReminderTab({ lv, uv }) {
     return () => clearInterval(timerRef.current);
   }, [active, nextAt]);
 
-  const startReminder = () => {
-    setNextAt(Date.now() + interval * 60000);
+  const start = () => {
+    const n = Date.now() + interval * 60000;
+    setNextAt(n);
     setActive(true);
     setCountdown(null);
+    localStorage.setItem(STORAGE_KEY, JSON.stringify({ nextAt: n, interval }));
   };
 
-  const stopReminder = () => {
+  const stop = () => {
     setActive(false);
     setNextAt(null);
     setCountdown(null);
     clearInterval(timerRef.current);
+    localStorage.removeItem(STORAGE_KEY);
   };
 
   return (
-    <div className="tab-content fade-up">
+    <div className="prev-tab-content">
       <div className="prev-section">
-        <div className="prev-section-label">
-          Suggested Interval for UV {uv.toFixed(1)}
+        <div className="prev-label">
+          Suggested for Current UV {uv.toFixed(1)}
         </div>
         <div
-          className="reminder-suggest"
-          style={{ background: lv.dim, borderColor: `${lv.color}40` }}
+          style={{
+            display: "flex",
+            alignItems: "center",
+            gap: 16,
+            padding: "16px 18px",
+            borderRadius: "var(--r)",
+            background: lv.dim,
+            border: `1px solid ${lv.color}40`,
+          }}
         >
           <span style={{ fontSize: 28 }}>⏰</span>
           <div>
             <div
               style={{
-                fontSize: 18,
+                fontSize: 20,
                 fontWeight: 800,
                 color: lv.color,
-                letterSpacing: -0.4,
+                letterSpacing: -0.5,
               }}
             >
               Every {suggestedLabel}
             </div>
-            <div style={{ fontSize: 12, color: "var(--text-2)", marginTop: 3 }}>
-              Based on current UV level — Cancer Council AU recommendation
+            <div
+              style={{
+                fontSize: 11,
+                color: "var(--fg-2)",
+                marginTop: 3,
+                fontFamily: "var(--font-mono)",
+              }}
+            >
+              Based on current UV · Cancer Council AU
             </div>
           </div>
         </div>
       </div>
 
       <div className="prev-section">
-        <div className="prev-section-label">Choose Interval</div>
-        <div className="interval-options">
+        <div className="prev-label">Choose Your Interval</div>
+        <div
+          style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}
+        >
           {INTERVALS.map((opt) => (
             <button
               key={opt.mins}
-              className={`interval-opt ${interval === opt.mins ? "on" : ""}`}
-              style={
-                interval === opt.mins
-                  ? {
-                      background: lv.dim,
-                      borderColor: `${lv.color}60`,
-                      color: lv.color,
-                    }
-                  : {}
-              }
               onClick={() => setInterval_(opt.mins)}
+              style={{
+                padding: "13px 10px",
+                borderRadius: "var(--r-sm)",
+                border: `1px solid ${interval === opt.mins ? `${lv.color}70` : "var(--border)"}`,
+                background: interval === opt.mins ? lv.dim : "var(--surface)",
+                cursor: "pointer",
+                transition: "all 0.15s",
+                fontFamily: "var(--font-display)",
+                display: "flex",
+                flexDirection: "column",
+                alignItems: "center",
+                gap: 3,
+              }}
             >
-              <span className="interval-opt-label">{opt.label}</span>
-              <span className="interval-opt-note">{opt.note}</span>
+              <span
+                style={{
+                  fontSize: 15,
+                  fontWeight: 800,
+                  color: interval === opt.mins ? lv.color : "var(--fg)",
+                }}
+              >
+                {opt.label}
+              </span>
+              <span
+                style={{
+                  fontSize: 9,
+                  fontFamily: "var(--font-mono)",
+                  color: "var(--fg-3)",
+                }}
+              >
+                {opt.note}
+              </span>
             </button>
           ))}
         </div>
@@ -112,16 +167,46 @@ export default function ReminderTab({ lv, uv }) {
 
       {active ? (
         <div
-          className="reminder-active"
-          style={{ borderColor: `${lv.color}50`, background: lv.dim }}
+          style={{
+            border: `1px solid ${lv.color}50`,
+            background: lv.dim,
+            borderRadius: "var(--r)",
+            padding: "28px 20px",
+            textAlign: "center",
+          }}
         >
-          <div className="reminder-active-title" style={{ color: lv.color }}>
+          <div
+            style={{
+              fontSize: 10,
+              fontFamily: "var(--font-mono)",
+              color: lv.color,
+              letterSpacing: 2,
+              textTransform: "uppercase",
+              marginBottom: 12,
+            }}
+          >
             Reminder Active
           </div>
-          <div className="reminder-countdown" style={{ color: lv.color }}>
+          <div
+            style={{
+              fontSize: 48,
+              fontWeight: 900,
+              color: lv.color,
+              letterSpacing: -2,
+              lineHeight: 1,
+              marginBottom: 10,
+            }}
+          >
             {countdown || "Starting…"}
           </div>
-          <div className="reminder-next">
+          <div
+            style={{
+              fontSize: 12,
+              color: "var(--fg-2)",
+              fontFamily: "var(--font-mono)",
+              marginBottom: 20,
+            }}
+          >
             Next reapplication at{" "}
             {nextAt
               ? new Date(nextAt).toLocaleTimeString("en-AU", {
@@ -130,18 +215,27 @@ export default function ReminderTab({ lv, uv }) {
                 })
               : "—"}
           </div>
-          <button className="reminder-stop-btn" onClick={stopReminder}>
+          <button className="btn btn-ghost btn-sm" onClick={stop}>
             Stop Reminder
           </button>
         </div>
       ) : (
         <button
-          className="reminder-start-btn"
+          onClick={start}
           style={{
-            background: `linear-gradient(135deg, ${lv.color}, ${lv.color}bb)`,
+            width: "100%",
+            padding: 16,
+            borderRadius: "var(--r)",
+            border: "none",
+            background: lv.color,
+            color: "#000",
+            fontSize: 15,
+            fontWeight: 800,
+            fontFamily: "var(--font-display)",
+            cursor: "pointer",
+            transition: "all 0.2s",
             boxShadow: `0 6px 24px ${lv.color}33`,
           }}
-          onClick={startReminder}
         >
           {countdown === "Time to reapply!"
             ? "🧴 Reapply Now & Restart"
@@ -151,30 +245,32 @@ export default function ReminderTab({ lv, uv }) {
 
       {countdown === "Time to reapply!" && !active && (
         <div
-          className="reapply-alert"
           style={{
-            borderColor: `${lv.color}60`,
+            padding: "14px 18px",
+            borderRadius: "var(--r)",
+            border: `1px solid ${lv.color}60`,
             background: lv.dim,
             color: lv.color,
+            fontSize: 14,
+            fontWeight: 700,
+            textAlign: "center",
           }}
         >
           🧴 Time to reapply your sunscreen!
         </div>
       )}
 
-      <div className="info-card" style={{ marginTop: 14 }}>
-        <div className="info-card-title">📋 Reapplication Rules</div>
-        <ul className="info-card-list">
+      <div className="prev-info-card">
+        <div className="prev-info-title">📋 Reapplication Rules</div>
+        <ul className="prev-info-list">
           <li>Reapply every 2 hours — or more often when sweating heavily</li>
           <li>Always reapply after swimming or towelling off</li>
           <li>Sunscreen degrades in heat — store below 30°C</li>
           <li>
-            Reapplication does not extend your total safe time — take shade
-            breaks
+            Reapplication does not extend total safe time — take shade breaks
           </li>
           <li>
-            No sunscreen provides 100% protection — combine with clothing and
-            shade
+            No sunscreen is 100% effective — combine with clothing and shade
           </li>
         </ul>
       </div>

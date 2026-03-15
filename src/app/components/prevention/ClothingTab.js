@@ -1,182 +1,165 @@
 "use client";
-// src/app/components/prevention/ReminderTab.js
 
-import { useState, useEffect, useRef } from "react";
+import { useState } from "react";
+import { FABRICS, getClothingTier } from "./constants";
 
-const INTERVALS = [
-  { mins: 30, label: "30 min", note: "Extreme UV" },
-  { mins: 60, label: "1 hour", note: "Very High UV" },
-  { mins: 90, label: "90 min", note: "High UV" },
-  { mins: 120, label: "2 hours", note: "Moderate UV" },
-  { mins: 240, label: "4 hours", note: "Low UV" },
-];
-
-export default function ReminderTab({ lv, uv }) {
-  const [interval, setInterval_] = useState(120);
-  const [active, setActive] = useState(false);
-  const [nextAt, setNextAt] = useState(null);
-  const [countdown, setCountdown] = useState(null);
-  const timerRef = useRef(null);
-
-  const suggestedInterval =
-    uv >= 11 ? 30 : uv >= 8 ? 60 : uv >= 6 ? 90 : uv >= 3 ? 120 : 240;
-  const suggestedLabel =
-    suggestedInterval < 60
-      ? `${suggestedInterval} min`
-      : suggestedInterval === 60
-        ? "1 hour"
-        : `${suggestedInterval / 60} hours`;
-
-  useEffect(() => {
-    if (!active || !nextAt) return;
-    timerRef.current = setInterval(() => {
-      const remaining = nextAt - Date.now();
-      if (remaining <= 0) {
-        setCountdown("Time to reapply!");
-        setActive(false);
-      } else {
-        const m = Math.floor(remaining / 60000);
-        const s = Math.floor((remaining % 60000) / 1000);
-        setCountdown(`${m}m ${s.toString().padStart(2, "0")}s`);
-      }
-    }, 1000);
-    return () => clearInterval(timerRef.current);
-  }, [active, nextAt]);
-
-  const startReminder = () => {
-    setNextAt(Date.now() + interval * 60000);
-    setActive(true);
-    setCountdown(null);
-  };
-
-  const stopReminder = () => {
-    setActive(false);
-    setNextAt(null);
-    setCountdown(null);
-    clearInterval(timerRef.current);
-  };
+export default function ClothingTab({ lv, uv }) {
+  const [activeFabric, setActiveFabric] = useState(null);
+  const tier = getClothingTier(uv);
 
   return (
-    <div className="tab-content fade-up">
+    <div className="prev-tab-content">
       <div className="prev-section">
-        <div className="prev-section-label">
-          Suggested Interval for UV {uv.toFixed(1)}
-        </div>
+        <div className="prev-label">Recommendations for UV {uv.toFixed(1)}</div>
         <div
-          className="reminder-suggest"
-          style={{ background: lv.dim, borderColor: `${lv.color}40` }}
-        >
-          <span style={{ fontSize: 28 }}>⏰</span>
-          <div>
-            <div
-              style={{
-                fontSize: 18,
-                fontWeight: 800,
-                color: lv.color,
-                letterSpacing: -0.4,
-              }}
-            >
-              Every {suggestedLabel}
-            </div>
-            <div style={{ fontSize: 12, color: "var(--text-2)", marginTop: 3 }}>
-              Based on current UV level — Cancer Council AU recommendation
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <div className="prev-section">
-        <div className="prev-section-label">Choose Interval</div>
-        <div className="interval-options">
-          {INTERVALS.map((opt) => (
-            <button
-              key={opt.mins}
-              className={`interval-opt ${interval === opt.mins ? "on" : ""}`}
-              style={
-                interval === opt.mins
-                  ? {
-                      background: lv.dim,
-                      borderColor: `${lv.color}60`,
-                      color: lv.color,
-                    }
-                  : {}
-              }
-              onClick={() => setInterval_(opt.mins)}
-            >
-              <span className="interval-opt-label">{opt.label}</span>
-              <span className="interval-opt-note">{opt.note}</span>
-            </button>
-          ))}
-        </div>
-      </div>
-
-      {active ? (
-        <div
-          className="reminder-active"
-          style={{ borderColor: `${lv.color}50`, background: lv.dim }}
-        >
-          <div className="reminder-active-title" style={{ color: lv.color }}>
-            Reminder Active
-          </div>
-          <div className="reminder-countdown" style={{ color: lv.color }}>
-            {countdown || "Starting…"}
-          </div>
-          <div className="reminder-next">
-            Next reapplication at{" "}
-            {nextAt
-              ? new Date(nextAt).toLocaleTimeString("en-AU", {
-                  hour: "2-digit",
-                  minute: "2-digit",
-                })
-              : "—"}
-          </div>
-          <button className="reminder-stop-btn" onClick={stopReminder}>
-            Stop Reminder
-          </button>
-        </div>
-      ) : (
-        <button
-          className="reminder-start-btn"
           style={{
-            background: `linear-gradient(135deg, ${lv.color}, ${lv.color}bb)`,
-            boxShadow: `0 6px 24px ${lv.color}33`,
-          }}
-          onClick={startReminder}
-        >
-          {countdown === "Time to reapply!"
-            ? "🧴 Reapply Now & Restart"
-            : "▶ Start Reminder"}
-        </button>
-      )}
-
-      {countdown === "Time to reapply!" && !active && (
-        <div
-          className="reapply-alert"
-          style={{
-            borderColor: `${lv.color}60`,
+            padding: "18px",
+            borderRadius: "var(--r)",
+            border: `1px solid ${lv.color}40`,
             background: lv.dim,
-            color: lv.color,
           }}
         >
-          🧴 Time to reapply your sunscreen!
+          <div
+            style={{
+              fontSize: 10,
+              fontFamily: "var(--font-mono)",
+              color: lv.color,
+              letterSpacing: 2,
+              textTransform: "uppercase",
+              marginBottom: 12,
+            }}
+          >
+            {tier.label}
+          </div>
+          <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+            {tier.items.map((item, i) => (
+              <div
+                key={i}
+                style={{
+                  display: "flex",
+                  alignItems: "flex-start",
+                  gap: 10,
+                  fontSize: 13,
+                  color: "var(--fg-1)",
+                  lineHeight: 1.5,
+                }}
+              >
+                <span style={{ color: lv.color, marginTop: 1, flexShrink: 0 }}>
+                  →
+                </span>
+                <span>{item}</span>
+              </div>
+            ))}
+          </div>
         </div>
-      )}
+      </div>
 
-      <div className="info-card" style={{ marginTop: 14 }}>
-        <div className="info-card-title">📋 Reapplication Rules</div>
-        <ul className="info-card-list">
-          <li>Reapply every 2 hours — or more often when sweating heavily</li>
-          <li>Always reapply after swimming or towelling off</li>
-          <li>Sunscreen degrades in heat — store below 30°C</li>
-          <li>
-            Reapplication does not extend your total safe time — take shade
-            breaks
-          </li>
-          <li>
-            No sunscreen provides 100% protection — combine with clothing and
-            shade
-          </li>
-        </ul>
+      <div className="prev-section">
+        <div className="prev-label">Fabric UPF Guide</div>
+        <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+          {FABRICS.map((f) => {
+            const on = activeFabric === f.name;
+            return (
+              <button
+                key={f.name}
+                onClick={() => setActiveFabric(on ? null : f.name)}
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 10,
+                  padding: "13px 14px",
+                  borderRadius: "var(--r-sm)",
+                  border: `1px solid ${on ? `${f.color}50` : "var(--border)"}`,
+                  background: on ? `${f.color}0e` : "var(--bg-2)",
+                  cursor: "pointer",
+                  transition: "all 0.15s",
+                  width: "100%",
+                  textAlign: "left",
+                }}
+              >
+                <div
+                  style={{
+                    fontSize: 14,
+                    fontWeight: 700,
+                    color: "var(--fg)",
+                    flex: 1,
+                  }}
+                >
+                  {f.name}
+                </div>
+                <div style={{ display: "flex", gap: 4, flexWrap: "wrap" }}>
+                  {f.tags.map((t) => (
+                    <span
+                      key={t}
+                      style={{
+                        fontSize: 9,
+                        padding: "2px 6px",
+                        borderRadius: 4,
+                        background: "var(--surface-2)",
+                        color: "var(--fg-3)",
+                        fontFamily: "var(--font-mono)",
+                      }}
+                    >
+                      {t}
+                    </span>
+                  ))}
+                </div>
+                <div
+                  style={{
+                    fontSize: 12,
+                    fontWeight: 800,
+                    fontFamily: "var(--font-mono)",
+                    color: f.color,
+                    minWidth: 50,
+                    textAlign: "right",
+                  }}
+                >
+                  UPF {f.upf}
+                </div>
+                <div
+                  style={{
+                    fontSize: 11,
+                    color: "var(--fg-3)",
+                    minWidth: 52,
+                    textAlign: "right",
+                    letterSpacing: 1,
+                  }}
+                >
+                  {"●".repeat(f.breathability)}
+                  {"○".repeat(5 - f.breathability)}
+                </div>
+              </button>
+            );
+          })}
+        </div>
+        <div
+          style={{
+            fontSize: 9,
+            fontFamily: "var(--font-mono)",
+            color: "var(--fg-3)",
+            marginTop: 6,
+          }}
+        >
+          ● = Breathability (5 = most breathable)
+        </div>
+      </div>
+
+      <div className="prev-info-card">
+        <div className="prev-info-title">👕 What is UPF?</div>
+        <div className="prev-info-body">
+          UPF (Ultraviolet Protection Factor) measures how much UV passes
+          through fabric. UPF 50+ blocks over 98% of UV — equivalent to SPF 50
+          sunscreen. Wet fabric loses 50–70% of its UPF rating.
+        </div>
+      </div>
+
+      <div className="prev-info-card">
+        <div className="prev-info-title">🧢 Hat Requirements by UV</div>
+        <div className="prev-info-body">
+          UV 3–5: Wide-brim hat (brim ≥7.5cm). UV 6+: Broad-brim or legionnaire
+          hat with neck flap. Caps and visors leave ears and neck exposed — the
+          most commonly burned areas in outdoor workers.
+        </div>
       </div>
     </div>
   );
