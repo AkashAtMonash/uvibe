@@ -1,14 +1,19 @@
 "use client";
-// src/app/components/prevention/SunscreenTab.js
 
 import { useState } from "react";
 import { BODY_PARTS, calcDosage } from "./constants";
 
-export default function SunscreenTab({ lv }) {
-  const [selectedParts, setSelectedParts] = useState(["face"]);
-  const [spf, setSpf] = useState(50);
+const SPF_OPTIONS = [
+  { val: 15, label: "SPF 15", note: "Minimum" },
+  { val: 30, label: "SPF 30", note: "Standard" },
+  { val: 50, label: "SPF 50+", note: "Recommended" },
+];
 
-  const togglePart = (id) =>
+export default function SunscreenTab({ lv, uv, prefs }) {
+  const [selectedParts, setSelectedParts] = useState(["face", "arms"]);
+  const [spf, setSpf] = useState(prefs?.spf ?? 50);
+
+  const toggle = (id) =>
     setSelectedParts((prev) =>
       prev.includes(id) ? prev.filter((p) => p !== id) : [...prev, id],
     );
@@ -16,109 +21,130 @@ export default function SunscreenTab({ lv }) {
   const dosage = calcDosage(selectedParts, spf);
 
   return (
-    <div className="tab-content fade-up">
+    <div className="prev-tab-content">
       <div className="prev-section">
-        <div className="prev-section-label">Body Parts to Cover</div>
-        <div className="part-grid">
-          {BODY_PARTS.map((p) => (
-            <button
-              key={p.id}
-              className={`part-btn ${selectedParts.includes(p.id) ? "on" : ""}`}
-              style={
-                selectedParts.includes(p.id)
-                  ? {
-                      background: lv.dim,
-                      borderColor: `${lv.color}60`,
-                      color: lv.color,
-                    }
-                  : {}
-              }
-              onClick={() => togglePart(p.id)}
-            >
-              <span className="part-check">
-                {selectedParts.includes(p.id) ? "✓" : ""}
-              </span>
-              <span className="part-name">{p.label}</span>
-              <span className="part-tsp">{p.tsp} tsp</span>
-            </button>
-          ))}
+        <div className="prev-label">Select Body Parts to Cover</div>
+        <div className="prev-part-grid">
+          {BODY_PARTS.map((p) => {
+            const on = selectedParts.includes(p.id);
+            return (
+              <button
+                key={p.id}
+                onClick={() => toggle(p.id)}
+                className="prev-part-btn"
+                style={{
+                  borderColor: on ? `${lv.color}70` : "var(--border)",
+                  background: on ? lv.dim : "var(--surface)",
+                  color: on ? lv.color : "var(--fg-2)",
+                }}
+              >
+                <span style={{ fontSize: 12 }}>{on ? "✓" : "○"}</span>
+                <span className="prev-part-name">{p.label}</span>
+                <span className="prev-part-tsp">{p.tsp} tsp</span>
+              </button>
+            );
+          })}
         </div>
       </div>
 
       <div className="prev-section">
-        <div className="prev-section-label">SPF Rating</div>
-        <div className="spf-row">
-          {[15, 30, 50].map((s) => (
+        <div className="prev-label">SPF Rating</div>
+        <div style={{ display: "flex", gap: 8 }}>
+          {SPF_OPTIONS.map((s) => (
             <button
-              key={s}
-              className={`spf-btn ${spf === s ? "on" : ""}`}
-              style={
-                spf === s
-                  ? {
-                      background: lv.dim,
-                      borderColor: `${lv.color}60`,
-                      color: lv.color,
-                    }
-                  : {}
-              }
-              onClick={() => setSpf(s)}
+              key={s.val}
+              onClick={() => setSpf(s.val)}
+              style={{
+                flex: 1,
+                padding: "12px 8px",
+                borderRadius: "var(--r-sm)",
+                border: `1px solid ${spf === s.val ? `${lv.color}70` : "var(--border)"}`,
+                background: spf === s.val ? lv.dim : "var(--surface)",
+                cursor: "pointer",
+                transition: "all 0.15s",
+                fontFamily: "var(--font-display)",
+                display: "flex",
+                flexDirection: "column",
+                alignItems: "center",
+                gap: 3,
+              }}
             >
-              SPF {s}
-              {s === 50 ? "+" : ""}
+              <div
+                style={{
+                  fontSize: 14,
+                  fontWeight: 800,
+                  color: spf === s.val ? lv.color : "var(--fg)",
+                }}
+              >
+                {s.label}
+              </div>
+              <div
+                style={{
+                  fontSize: 9,
+                  fontFamily: "var(--font-mono)",
+                  color: "var(--fg-3)",
+                }}
+              >
+                {s.note}
+              </div>
             </button>
           ))}
         </div>
-        <div className="spf-note">
+        <div className="prev-note">
           Cancer Council Australia recommends SPF 50+ broad-spectrum,
-          water-resistant sunscreen.
-          <br />
-          SPF 50 filters ~98% of UVB rays. SPF 30 filters ~97%.
+          water-resistant sunscreen. SPF 50 filters ~98% of UVB.
         </div>
       </div>
 
       <div
-        className="dosage-result"
+        className="prev-dosage-card"
         style={{ borderColor: `${lv.color}40`, background: lv.dim }}
       >
-        <div className="dosage-result-label" style={{ color: lv.color }}>
+        <div className="prev-dosage-label" style={{ color: lv.color }}>
           Recommended Dosage
         </div>
-        <div className="dosage-numbers">
-          <div className="dosage-stat">
-            <div className="dosage-val" style={{ color: lv.color }}>
+        <div className="prev-dosage-numbers">
+          <div className="prev-dosage-stat">
+            <div className="prev-dosage-val" style={{ color: lv.color }}>
               {dosage.tsp}
             </div>
-            <div className="dosage-unit">teaspoons</div>
+            <div className="prev-dosage-unit">teaspoons</div>
           </div>
-          <div className="dosage-divider" />
-          <div className="dosage-stat">
-            <div className="dosage-val" style={{ color: lv.color }}>
+          <div className="prev-dosage-divider" />
+          <div className="prev-dosage-stat">
+            <div className="prev-dosage-val" style={{ color: lv.color }}>
               {dosage.pumps}
             </div>
-            <div className="dosage-unit">pumps</div>
+            <div className="prev-dosage-unit">pumps</div>
           </div>
-          <div className="dosage-divider" />
-          <div className="dosage-stat">
-            <div className="dosage-val" style={{ color: lv.color }}>
+          <div className="prev-dosage-divider" />
+          <div className="prev-dosage-stat">
+            <div className="prev-dosage-val" style={{ color: lv.color }}>
               {dosage.ml}
             </div>
-            <div className="dosage-unit">ml</div>
+            <div className="prev-dosage-unit">ml</div>
           </div>
         </div>
-        <div className="dosage-tip">
+        <div
+          style={{
+            fontSize: 12,
+            color: lv.color,
+            opacity: 0.7,
+            textAlign: "center",
+          }}
+        >
           Apply 20 min before going outside. Most people use 25–50% less than
-          needed — be generous.
+          needed.
         </div>
       </div>
 
-      <div className="info-card">
-        <div className="info-card-title">⚠️ 2025 TGA Sunscreen Alert</div>
-        <div className="info-card-body">
+      <div className="prev-info-card">
+        <div className="prev-info-title">⚠️ 2025 TGA Sunscreen Alert</div>
+        <div className="prev-info-body">
           In 2025, a CHOICE investigation found 18 of 20 popular Australian
-          sunscreens did not meet their claimed SPF rating under Australian
-          Standard AS/NZS 2604. Apply more than the recommended amount to
-          compensate. Look for an AUST number on the label confirming TGA
-          registration.
+          sunscreens did not meet their claimed SPF under Australian Standard
+          AS/NZS 2604. Apply generously and look for an AUST number on the label
+          confirming TGA registration.
         </div>
       </div>
     </div>

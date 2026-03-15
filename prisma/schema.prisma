@@ -1,7 +1,6 @@
-// prisma/schema.prisma
-
 generator client {
   provider = "prisma-client-js"
+  output   = "../src/generated/prisma"
 }
 
 datasource db {
@@ -14,9 +13,10 @@ model User {
   ageGroup      String?   @map("age_group")
   skinType      String?   @map("skin_type")
   spfPreference Int?      @map("spf_preference")
-  notifEnabled  Boolean   @default(true) @map("notif_enabled")
-  reminderTime  String?   @map("reminder_time")
-  createdAt     DateTime  @default(now()) @map("created_at")
+  notifEnabled       Boolean   @default(true) @map("notif_enabled")
+  reminderTime       String?   @map("reminder_time")
+  vapidSubscription  String?   @map("vapid_subscription")
+  createdAt          DateTime  @default(now()) @map("created_at")
   updatedAt     DateTime  @updatedAt @map("updated_at")
 
   subscriptions UserLocationSubscription[]
@@ -27,7 +27,7 @@ model User {
 
 model Location {
   locationId   Int      @id @default(autoincrement()) @map("location_id")
-  locationName String   @map("location_name")
+  locationName String   @unique @map("location_name")
   latitude     Float
   longitude    Float
   postcode     String?
@@ -42,7 +42,7 @@ model Location {
 
 model UvRiskCategory {
   riskCategoryId Int      @id @default(autoincrement()) @map("risk_category_id")
-  categoryName   String   @map("category_name")
+  categoryName   String   @unique @map("category_name")
   minUv          Float    @map("min_uv")
   maxUv          Float    @map("max_uv")
   healthAdvice   String?  @map("health_advice")

@@ -4,19 +4,23 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
-    "build": "next build",
+    "build": "npx prisma generate && next build",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "postinstall": "npx prisma generate"
   },
   "dependencies": {
     "@ducanh2912/next-pwa": "^10.2.9",
+    "@prisma/adapter-pg": "^7.5.0",
     "@prisma/client": "^7.4.2",
+    "arpansa-uv-data": "^1.1.1",
     "axios": "^1.13.6",
     "d3": "^7.9.0",
     "dotenv": "^17.3.1",
     "fast-xml-parser": "^5.5.2",
     "lucide-react": "^0.577.0",
     "next": "16.1.6",
+    "pg": "^8.20.0",
     "prisma": "^7.4.2",
     "react": "19.2.3",
     "react-dom": "19.2.3",
