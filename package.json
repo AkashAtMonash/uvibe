@@ -12,6 +12,7 @@
     "@ducanh2912/next-pwa": "^10.2.9",
     "@prisma/adapter-pg": "^7.5.0",
     "@prisma/client": "^7.4.2",
+    "arpansa-uv-data": "^1.1.1",
     "axios": "^1.13.6",
     "dotenv": "^17.3.1",
     "fast-xml-parser": "^5.5.2",

@@ -8,6 +8,7 @@ import LocationModal from "@/app/components/LocationModal";
 import LandingPage from "@/app/components/LandingPage";
 import HomePage from "@/app/components/HomePage";
 import SettingsPage from "@/app/components/SettingsPage";
+import PreventionPage from "@/app/components/PreventionPage";
 
 import { nearestCity, getLevel, applyUVTheme } from "@/utils/uv";
 import { useUserSync } from "@/hooks/useUserSync";
@@ -28,24 +29,50 @@ function useIsMobile() {
   return mobile;
 }
 
+function readStorage() {
+  if (typeof window === "undefined") return {};
+  try {
+    const loc = localStorage.getItem("uvibe_location");
+    const prefs = localStorage.getItem("uvibe_prefs");
+    const theme = localStorage.getItem("uvibe_theme");
+    const contrast = localStorage.getItem("uvibe_contrast");
+    const page = localStorage.getItem("uvibe_page");
+    const location = loc ? JSON.parse(loc) : null;
+    return {
+      city: location?.city ?? "Melbourne",
+      granted: location?.granted ?? false,
+      hasLocation: !!loc,
+      prefs: prefs ? JSON.parse(prefs) : null,
+      theme: theme ?? "black",
+      contrast: contrast === "true",
+      page: page ?? "home",
+    };
+  } catch {
+    return {};
+  }
+}
+
 export default function Page() {
-  const [screen, setScreen] = useState("loading");
-  const [page, setPage] = useState("home");
-  const [savedPage, setSavedPage] = useState("home");
-  const [city, setCity] = useState("Melbourne");
+  const stored = readStorage();
+
+  const [screen, setScreen] = useState(stored.hasLocation ? "app" : "loading");
+  const [page, setPage] = useState(stored.page ?? "home");
+  const [city, setCity] = useState(stored.city ?? "Melbourne");
   const [showModal, setShowModal] = useState(false);
-  const [geoGranted, setGeoGranted] = useState(false);
-  const [theme, setTheme] = useState("black");
-  const [contrast, setContrast] = useState(false);
-  const [prefs, setPrefs] = useState({
-    skinType: "III",
-    spf: 50,
-    notifEnabled: false,
-    reapplyReminder: false,
-    alertThreshold: 6,
-    name: "",
-    ageRange: "",
-  });
+  const [geoGranted, setGeoGranted] = useState(stored.granted ?? false);
+  const [theme, setTheme] = useState(stored.theme ?? "black");
+  const [contrast, setContrast] = useState(stored.contrast ?? false);
+  const [prefs, setPrefs] = useState(
+    stored.prefs ?? {
+      skinType: "III",
+      spf: 50,
+      notifEnabled: false,
+      reapplyReminder: false,
+      alertThreshold: 6,
+      name: "",
+      ageRange: "",
+    },
+  );
   const [uv, setUv] = useState(0);
   const isMobile = useIsMobile();
 
@@ -54,26 +81,9 @@ export default function Page() {
   const lv = getLevel(uv);
 
   useEffect(() => {
-    const savedPrefs = localStorage.getItem("uvibe_prefs");
-    const savedTheme = localStorage.getItem("uvibe_theme");
-    const savedContrast = localStorage.getItem("uvibe_contrast");
-    const savedLocation = localStorage.getItem("uvibe_location");
-
-    const savedPage = localStorage.getItem("uvibe_page");
-    if (savedPrefs) setPrefs(JSON.parse(savedPrefs));
-    if (savedTheme) setTheme(savedTheme);
-    if (savedContrast) setContrast(savedContrast === "true");
-    if (savedPage) setPage(savedPage);
-
-    if (savedLocation) {
-      const { city: c, granted } = JSON.parse(savedLocation);
-      setCity(c);
-      setGeoGranted(granted);
-      setScreen("app");
-    } else {
-      setScreen(isMobile ? "modal" : "landing");
-    }
-  }, []);
+    if (screen !== "loading") return;
+    setScreen(isMobile ? "modal" : "landing");
+  }, [isMobile, screen]);
 
   useEffect(() => {
     if (screen === "loading") return;
@@ -92,6 +102,13 @@ export default function Page() {
   useEffect(() => {
     if (screen === "app") localStorage.setItem("uvibe_page", page);
   }, [page, screen]);
+
+  useEffect(() => {
+    if (screen !== "app") return;
+    const existing = localStorage.getItem("uvibe_location");
+    const granted = existing ? JSON.parse(existing).granted : geoGranted;
+    localStorage.setItem("uvibe_location", JSON.stringify({ city, granted }));
+  }, [city, screen]);
 
   useEffect(() => {
     applyUVTheme(lv);
@@ -192,7 +209,9 @@ export default function Page() {
             />
           )}
           {page === "awareness" && <BlankPage label="Awareness" />}
-          {page === "prevention" && <BlankPage label="Prevention" />}
+          {page === "prevention" && (
+            <PreventionPage city={city} uv={uv} prefs={prefs} />
+          )}
           {page === "settings" && (
             <SettingsPage
               prefs={prefs}

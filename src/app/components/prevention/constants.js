@@ -1,12 +1,3 @@
-// src/app/components/prevention/constants.js
-
-export const TABS = [
-  { id: "sunscreen", icon: "🧴", label: "Sunscreen", sub: "Dosage & SPF" },
-  { id: "reminder", icon: "⏰", label: "Reminders", sub: "Reapplication" },
-  { id: "clothing", icon: "👕", label: "Clothing", sub: "UPF & Fabric" },
-  { id: "guide", icon: "📋", label: "Guide", sub: "5 S's & Tips" },
-];
-
 export const BODY_PARTS = [
   { id: "face", label: "Face & Neck", tsp: 0.5 },
   { id: "arms", label: "Arms", tsp: 0.5 },
@@ -35,14 +26,14 @@ export const FABRICS = [
     name: "Denim (dark)",
     upf: "50+",
     breathability: 2,
-    color: "#fbbf24",
+    color: "#f59e0b",
     tags: ["Casual", "Commute"],
   },
   {
     name: "Cotton (dark)",
     upf: "25+",
     breathability: 5,
-    color: "#fbbf24",
+    color: "#f59e0b",
     tags: ["Everyday", "Casual"],
   },
   {
@@ -82,7 +73,7 @@ export const CLOTHING_BY_UV = {
     items: [
       "Long-sleeve shirt recommended",
       "Wide-brim hat (≥7.5cm brim)",
-      "Sunglasses with UV400 rating",
+      "Sunglasses UV400 rating",
       "SPF 30+ on exposed skin",
     ],
   },
@@ -99,7 +90,7 @@ export const CLOTHING_BY_UV = {
   veryhigh: {
     label: "Very High UV (8–10)",
     items: [
-      "UPF 50+ clothing on all exposed areas",
+      "UPF 50+ clothing all exposed areas",
       "Full-coverage hat",
       "UV400 sunglasses",
       "SPF 50+ reapplied every 2 hrs",
@@ -109,7 +100,7 @@ export const CLOTHING_BY_UV = {
   extreme: {
     label: "Extreme UV (11+)",
     items: [
-      "Stay indoors or in full shade",
+      "Stay indoors or full shade",
       "UPF 50+ full-coverage if outside",
       "Broad-brim hat + neck flap",
       "SPF 50+ every 2 hrs",
@@ -124,35 +115,35 @@ export const FIVE_S = [
     icon: "👕",
     color: "#22d3aa",
     title: "Slip on clothing",
-    body: "Cover as much skin as possible. Choose loose-fitting, tightly-woven fabric. Dark or bright colours absorb more UV than pale ones. Look for garments with a UPF rating.",
+    body: "Cover as much skin as possible. Choose loose-fitting, tightly-woven fabric. Dark or bright colours absorb more UV. Look for UPF-rated garments.",
   },
   {
     s: "Slop",
     icon: "🧴",
-    color: "#fbbf24",
+    color: "#f59e0b",
     title: "Slop on SPF 50+",
-    body: "Apply SPF 50+ broad-spectrum, water-resistant sunscreen 20 minutes before going outside. Use a teaspoon per body part. Reapply every 2 hours — or more often if sweating or swimming.",
+    body: "Apply SPF 50+ broad-spectrum, water-resistant sunscreen 20 min before going outside. Use a teaspoon per body part. Reapply every 2 hours.",
   },
   {
     s: "Slap",
     icon: "🧢",
     color: "#f97316",
     title: "Slap on a hat",
-    body: "A broad-brim hat (brim ≥7.5cm) protects your face, ears and neck. Caps and visors leave your ears and neck exposed. Legionnaire hats with neck flaps provide the best coverage outdoors.",
+    body: "A broad-brim hat (brim ≥7.5cm) protects face, ears and neck. Caps leave ears and neck exposed. Legionnaire hats with neck flaps are best outdoors.",
   },
   {
     s: "Seek",
     icon: "🌳",
     color: "#22d3aa",
     title: "Seek shade",
-    body: "UV radiation can be intense even on cloudy days — up to 80% of UV penetrates light cloud cover. Seek shade particularly between 10am and 3pm when UV is at its most intense.",
+    body: "Up to 80% of UV penetrates light cloud. Seek shade particularly between 10am and 3pm when UV is at its most intense.",
   },
   {
     s: "Slide",
     icon: "🕶️",
     color: "#a78bfa",
     title: "Slide on sunglasses",
-    body: "UV radiation can cause cataracts and eye damage. Choose close-fitting, wrap-around sunglasses that meet the Australian Standard AS/NZS 1067. Look for a UV400 rating.",
+    body: "UV causes cataracts and eye damage. Choose close-fitting, wrap-around sunglasses that meet AS/NZS 1067. Look for UV400 rating.",
   },
 ];
 
@@ -161,41 +152,40 @@ export const ACTIVITY_TIPS = [
     icon: "🏖️",
     activity: "Beach & Swimming",
     tips: [
-      "Water reflects up to 25% extra UV — protection is critical",
+      "Water reflects up to 25% extra UV",
       "Reapply SPF 50+ immediately after towelling",
-      "Wet clothing loses 50–70% of UPF rating — change into dry clothes",
-      "Seek shade under umbrellas between sessions",
-      "UV intensity is highest 10am–2pm even at the beach",
+      "Wet clothing loses 50–70% of UPF rating",
+      "Seek shade between swim sessions",
+      "Peak UV at beach: 10am–2pm",
     ],
   },
   {
     icon: "🏃",
     activity: "Sport & Exercise",
     tips: [
-      "Sweat degrades sunscreen — reapply every 60–90 min during sport",
-      "Wear UPF 50+ rashies or sports tops instead of relying on sunscreen alone",
-      "Schedule training before 10am or after 3pm when UV is lower",
-      "UV exposure during sport adds up quickly — even 30 min counts",
+      "Sweat degrades sunscreen — reapply every 60–90 min",
+      "Wear UPF 50+ rashies instead of relying on sunscreen",
+      "Schedule training before 10am or after 3pm",
+      "Even 30 min of sport exposure adds up over time",
     ],
   },
   {
     icon: "🚗",
     activity: "Daily Commute",
     tips: [
-      "Car windows block UVB but not UVA — arm and face still exposed during driving",
-      "Glass in offices and cars does not block all UV — seated near windows still carries risk",
-      "Apply SPF as part of your morning routine every day UV ≥ 3",
-      "Even 10 min of incidental exposure daily accumulates over years",
+      "Car windows block UVB but not UVA — face and arms still at risk",
+      "Apply SPF as part of morning routine every UV ≥ 3 day",
+      "10 min of incidental daily exposure accumulates over years",
     ],
   },
   {
     icon: "👷",
     activity: "Outdoor Work",
     tips: [
-      "Outdoor workers receive 5–10× more UV than indoor workers",
-      "Safe Work Australia recommends sun protection even when UV < 3 for outdoor workers",
-      "Employers must provide shade, SPF 50+ and UV-protective uniforms",
-      "UV-related skin cancer is a compensable workplace injury in Australia",
+      "Outdoor workers get 5–10× more UV than indoor workers",
+      "Safe Work Australia recommends SPF even when UV < 3",
+      "Employers must provide shade, SPF 50+ and UV uniforms",
+      "UV skin cancer is a compensable workplace injury in Australia",
     ],
   },
 ];
@@ -250,7 +240,7 @@ export const BEST_TIMES = [
     icon: "⚠️",
     uv: "High",
     safe: false,
-    desc: "UV still dangerously high despite the sun moving lower. Do not drop protection.",
+    desc: "UV still dangerously high. Do not drop sun protection.",
   },
   {
     time: "After 4pm",
@@ -282,3 +272,10 @@ export function getClothingTier(uv) {
   if (uv >= 3) return CLOTHING_BY_UV.moderate;
   return CLOTHING_BY_UV.low;
 }
+
+export const PREV_TABS = [
+  { id: "sunscreen", icon: "🧴", label: "Sunscreen" },
+  { id: "reminder", icon: "⏰", label: "Reminder" },
+  { id: "clothing", icon: "👕", label: "Clothing" },
+  { id: "guide", icon: "📋", label: "Guide" },
+];
