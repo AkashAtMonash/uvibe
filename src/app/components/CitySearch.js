@@ -3,13 +3,7 @@
 import { useState, useRef, useEffect } from "react";
 import { CITIES } from "@/utils/uv";
 
-export default function CitySearch({
-  city,
-  setCity,
-  uvColor,
-  geoGranted,
-  onRequestGeo,
-}) {
+export default function CitySearch({ city, setCity }) {
   const [query, setQuery] = useState("");
   const [open, setOpen] = useState(false);
   const [focused, setFocused] = useState(false);
@@ -17,48 +11,37 @@ export default function CitySearch({
   const wrapRef = useRef(null);
 
   const cityNames = Object.keys(CITIES);
-  const filtered =
-    query.trim().length === 0
-      ? cityNames
-      : cityNames.filter((c) => c.toLowerCase().includes(query.toLowerCase()));
+  const filtered = query.trim()
+    ? cityNames.filter((c) => c.toLowerCase().includes(query.toLowerCase()))
+    : cityNames;
 
   useEffect(() => {
-    function handleClickOutside(e) {
+    const close = (e) => {
       if (wrapRef.current && !wrapRef.current.contains(e.target)) {
         setOpen(false);
         setQuery("");
       }
-    }
-    document.addEventListener("mousedown", handleClickOutside);
-    return () => document.removeEventListener("mousedown", handleClickOutside);
+    };
+    document.addEventListener("mousedown", close);
+    return () => document.removeEventListener("mousedown", close);
   }, []);
 
-  const handleSelect = (name) => {
+  const select = (name) => {
     setCity(name);
     setQuery("");
     setOpen(false);
-    inputRef.current?.blur();
-  };
-
-  const handleFocus = () => {
-    setFocused(true);
-    setOpen(true);
-  };
-
-  const handleBlur = () => {
-    setFocused(false);
   };
 
   return (
-    <div ref={wrapRef} style={{ position: "relative", flex: 1 }}>
+    <div ref={wrapRef} className="city-search-container" style={{ flex: 1 }}>
       <div
-        className="city-search-wrap"
-        style={{
-          border: `1.5px solid ${focused ? uvColor + "80" : "var(--surface-border-strong)"}`,
-          boxShadow: focused ? `0 0 0 3px ${uvColor}18` : "none",
+        className={`city-search-field ${focused ? "focused" : ""}`}
+        onClick={() => {
+          setOpen(true);
+          inputRef.current?.focus();
         }}
       >
-        <span className="city-search-icon">🔍</span>
+        <span className="city-search-icon">◎</span>
         <input
           ref={inputRef}
           className="city-search-input"
@@ -69,8 +52,11 @@ export default function CitySearch({
             setQuery(e.target.value);
             setOpen(true);
           }}
-          onFocus={handleFocus}
-          onBlur={handleBlur}
+          onFocus={() => {
+            setFocused(true);
+            setOpen(true);
+          }}
+          onBlur={() => setFocused(false)}
           aria-label="Search city"
           autoComplete="off"
           spellCheck="false"
@@ -78,27 +64,21 @@ export default function CitySearch({
         {query && (
           <button
             className="city-search-clear"
-            onClick={() => {
+            onMouseDown={(e) => {
+              e.preventDefault();
               setQuery("");
-              inputRef.current?.focus();
             }}
-            aria-label="Clear search"
           >
             ✕
           </button>
         )}
-        <span
-          className="city-search-caret"
-          style={{ color: focused ? uvColor : "var(--text-3)" }}
-        >
-          ▾
-        </span>
+        <span className="city-search-caret">▾</span>
       </div>
 
       {open && (
-        <div className="city-dropdown" role="listbox" aria-label="City options">
+        <div className="city-dropdown" role="listbox">
           {filtered.length === 0 ? (
-            <div className="city-dropdown-empty">No cities found</div>
+            <div className="city-empty">No cities found</div>
           ) : (
             filtered.map((name) => (
               <button
@@ -106,17 +86,12 @@ export default function CitySearch({
                 role="option"
                 aria-selected={name === city}
                 className={`city-option ${name === city ? "selected" : ""}`}
-                style={
-                  name === city
-                    ? { background: uvColor + "18", color: uvColor }
-                    : {}
-                }
-                onMouseDown={() => handleSelect(name)}
+                onMouseDown={() => select(name)}
               >
-                <span
+                <div
                   className="city-option-dot"
                   style={{
-                    background: name === city ? uvColor : "var(--text-3)",
+                    background: name === city ? "var(--uv)" : "var(--fg-3)",
                   }}
                 />
                 <span>{name}</span>

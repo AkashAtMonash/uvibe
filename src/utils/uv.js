@@ -31,17 +31,15 @@ export const UV_LEVELS = [
     max: 2.9,
     color: "#22d3aa",
     dim: "rgba(34,211,170,0.10)",
-    glow: "rgba(34,211,170,0.20)",
-    short: "Safe outdoors",
+    glow: "rgba(34,211,170,0.15)",
   },
   {
     name: "Moderate",
     min: 3,
     max: 5.9,
-    color: "#fbbf24",
-    dim: "rgba(251,191,36,0.10)",
-    glow: "rgba(251,191,36,0.20)",
-    short: "Wear SPF 30+",
+    color: "#f59e0b",
+    dim: "rgba(245,158,11,0.10)",
+    glow: "rgba(245,158,11,0.15)",
   },
   {
     name: "High",
@@ -49,8 +47,7 @@ export const UV_LEVELS = [
     max: 7.9,
     color: "#f97316",
     dim: "rgba(249,115,22,0.10)",
-    glow: "rgba(249,115,22,0.20)",
-    short: "SPF 50+ essential",
+    glow: "rgba(249,115,22,0.15)",
   },
   {
     name: "Very High",
@@ -58,8 +55,7 @@ export const UV_LEVELS = [
     max: 10.9,
     color: "#ef4444",
     dim: "rgba(239,68,68,0.10)",
-    glow: "rgba(239,68,68,0.20)",
-    short: "Avoid peak hours",
+    glow: "rgba(239,68,68,0.15)",
   },
   {
     name: "Extreme",
@@ -67,25 +63,24 @@ export const UV_LEVELS = [
     max: 99,
     color: "#c026d3",
     dim: "rgba(192,38,211,0.10)",
-    glow: "rgba(192,38,211,0.20)",
-    short: "Stay indoors",
+    glow: "rgba(192,38,211,0.15)",
   },
 ];
 
 const FITZPATRICK = [
-  { type: "I", multi: 0.6 },
-  { type: "II", multi: 0.8 },
-  { type: "III", multi: 1.0 },
-  { type: "IV", multi: 1.3 },
-  { type: "V", multi: 1.6 },
-  { type: "VI", multi: 2.0 },
+  { type: "I", label: "Type I", multi: 0.6 },
+  { type: "II", label: "Type II", multi: 0.8 },
+  { type: "III", label: "Type III", multi: 1.0 },
+  { type: "IV", label: "Type IV", multi: 1.3 },
+  { type: "V", label: "Type V", multi: 1.6 },
+  { type: "VI", label: "Type VI", multi: 2.0 },
 ];
 
 const BASE_UV = {
   Darwin: 12.4,
   "Alice Springs": 11.8,
-  Townsville: 11.2,
   Emerald: 11.0,
+  Townsville: 11.2,
   "Gold Coast": 10.6,
   Brisbane: 10.2,
   Newcastle: 9.8,
@@ -101,7 +96,7 @@ export function getLevel(uv) {
   return UV_LEVELS.find((l) => uv >= l.min && uv <= l.max) || UV_LEVELS[0];
 }
 
-export function calcBurn(uv, skinType = "III", spf = 30) {
+export function calcBurn(uv, skinType = "III", spf = 50) {
   if (!uv || uv <= 0) return null;
   const f = FITZPATRICK.find((f) => f.type === skinType);
   if (!f) return null;
@@ -118,38 +113,22 @@ export function humanAlert(uv, burn, city) {
   if (!burn || uv <= 0)
     return `UV data loaded for ${city}. Check back during daylight hours.`;
   if (uv <= 2)
-    return `UV is ${uv} in ${city}. Conditions are safe — no sun protection needed right now.`;
+    return `UV is ${uv} in ${city}. Conditions are safe — no sun protection required right now.`;
   if (uv <= 5)
     return `UV is ${uv} in ${city}. Skin damage begins in ~${burn.bare} min without protection.`;
   if (uv <= 7)
-    return `UV is ${uv} in ${city}. Bare skin burns in ~${burn.bare} min. SPF 50+ gives ~${burn.prot} min.`;
+    return `UV is ${uv} in ${city}. Bare skin burns in ~${burn.bare} min. SPF 50+ extends that to ~${burn.prot} min.`;
   if (uv <= 10)
-    return `Dangerous UV of ${uv} in ${city}. Skin damage starts in ${burn.bare} min — apply SPF 50+ and seek shade now.`;
-  return `Extreme UV ${uv} in ${city}. Permanent damage in as little as ${burn.bare} min. Stay indoors if possible.`;
+    return `Dangerous UV ${uv} in ${city}. Skin damage in ${burn.bare} min — apply SPF 50+ and seek shade now.`;
+  return `Extreme UV ${uv} in ${city}. Permanent skin damage in as little as ${burn.bare} min. Stay indoors if possible.`;
 }
 
 export function getDynamicInterval(uv) {
-  if (uv >= 11)
-    return {
-      label: "Every 30 min",
-      reason: "Extreme UV — maximum reminder frequency",
-    };
-  if (uv >= 8)
-    return {
-      label: "Every 1 hour",
-      reason: "Very High UV — hourly reapplication essential",
-    };
-  if (uv >= 6)
-    return {
-      label: "Every 90 min",
-      reason: "High UV — standard reapplication window",
-    };
-  if (uv >= 3)
-    return {
-      label: "Every 2 hours",
-      reason: "Moderate UV — regular reapplication recommended",
-    };
-  return { label: "Every 4 hours", reason: "Low UV — minimal reminder needed" };
+  if (uv >= 11) return { label: "Every 30 min", reason: "Extreme UV" };
+  if (uv >= 8) return { label: "Every 1 hour", reason: "Very High UV" };
+  if (uv >= 6) return { label: "Every 90 min", reason: "High UV" };
+  if (uv >= 3) return { label: "Every 2 hours", reason: "Moderate UV" };
+  return { label: "Every 4 hours", reason: "Low UV" };
 }
 
 export function nearestCity(lat, lon) {
@@ -204,4 +183,11 @@ export function buildForecast(city) {
           : `${hr > 12 ? hr - 12 : hr || 12}${hr >= 12 ? "pm" : "am"}`;
     return { label: lbl, val, lv: getLevel(val), now: i === 3 };
   });
+}
+
+export function applyUVTheme(lv) {
+  const r = document.documentElement;
+  r.style.setProperty("--uv", lv.color);
+  r.style.setProperty("--uv-10", lv.dim);
+  r.style.setProperty("--uv-20", lv.glow);
 }
