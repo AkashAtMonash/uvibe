@@ -1,4 +1,3 @@
-// src/hooks/useUserSync.js
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
@@ -162,21 +161,44 @@ export function useUserSync() {
     [],
   );
 
-  const sendTestNotification = useCallback(async () => {
+  const sendTestNotification = useCallback(async (city, uv) => {
     const token = localStorage.getItem(TOKEN_KEY);
-    if (!token) return { error: "No push token — enable UV Alerts first" };
+    if (!token) return { error: "No push token — toggle UV Alerts ON first" };
+
+    // Always attempt to register SW and save subscription before sending
+    // This handles the case where user exists in DB but subscription was never saved
+    try {
+      const vapidKey = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY;
+      if (!vapidKey)
+        return { error: "NEXT_PUBLIC_VAPID_PUBLIC_KEY not set in .env.local" };
+
+      const subscription = await registerSWAndSubscribe(vapidKey);
+
+      await fetch("/api/push-subscription", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          pushToken: token,
+          subscription: subscription.toJSON(),
+        }),
+      });
+    } catch (swErr) {
+      return { error: `SW registration failed: ${swErr.message}` };
+    }
+
     try {
       const res = await fetch("/api/push-send", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           pushToken: token,
-          title: "☀ UVibe Test Notification",
-          body: "Push notifications are working! You'll be alerted when UV is high.",
-          urgent: false,
+          cityName: city ?? "Melbourne",
+          uv: uv ?? 0,
         }),
       });
-      return await res.json();
+      const data = await res.json();
+      if (!res.ok) return { error: data.error ?? data.detail ?? "Send failed" };
+      return data;
     } catch (err) {
       return { error: err.message };
     }

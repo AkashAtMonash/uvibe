@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import webpush from "web-push";
 import { prisma } from "@/lib/prisma";
 import { XMLParser } from "fast-xml-parser";
+import { buildNotificationPayload } from "@/app/api/push-send/route";
 
 webpush.setVapidDetails(
   process.env.VAPID_SUBJECT,
@@ -9,41 +10,76 @@ webpush.setVapidDetails(
   process.env.VAPID_PRIVATE_KEY,
 );
 
-const UV_LEVEL_LABEL = (uv) =>
-  uv >= 11
-    ? "Extreme"
-    : uv >= 8
-      ? "Very High"
-      : uv >= 6
-        ? "High"
-        : uv >= 3
-          ? "Moderate"
-          : "Low";
+const ARPANSA_NAMES = {
+  Melbourne: "Melbourne",
+  Sydney: "Sydney",
+  Brisbane: "Brisbane",
+  Adelaide: "Adelaide",
+  Perth: "Perth",
+  Darwin: "Darwin",
+  Hobart: "Kingston",
+  Canberra: "Canberra",
+  Townsville: "Townsville",
+  "Alice Springs": "Alice Springs",
+  "Gold Coast": "Gold Coast",
+  Newcastle: "Newcastle",
+  Emerald: "Emerald",
+};
 
-const UV_ADVICE = (uv) =>
-  uv >= 11
-    ? "Stay indoors. Unprotected skin burns in minutes."
-    : uv >= 8
-      ? "Avoid being outside. Apply SPF 50+ and cover up."
-      : uv >= 6
-        ? "SPF 50+ essential. Wear hat and sunglasses."
-        : "Wear SPF 30+ if outside for more than 30 minutes.";
+const CITY_COORDS = {
+  Melbourne: { lat: -37.81, lon: 144.96 },
+  Sydney: { lat: -33.87, lon: 151.21 },
+  Brisbane: { lat: -27.47, lon: 153.03 },
+  Adelaide: { lat: -34.93, lon: 138.6 },
+  Perth: { lat: -31.95, lon: 115.86 },
+  Darwin: { lat: -12.46, lon: 130.84 },
+  Hobart: { lat: -42.88, lon: 147.33 },
+  Canberra: { lat: -35.28, lon: 149.13 },
+  Townsville: { lat: -19.26, lon: 146.82 },
+  "Alice Springs": { lat: -23.7, lon: 133.88 },
+  "Gold Coast": { lat: -28.0, lon: 153.43 },
+  Newcastle: { lat: -32.93, lon: 151.78 },
+  Emerald: { lat: -23.52, lon: 148.16 },
+};
 
-async function fetchUVForCity(arpansaId) {
+async function fetchARPANSA() {
   const res = await fetch("https://uvdata.arpansa.gov.au/xml/uvvalues.xml", {
-    next: { revalidate: 0 },
+    cache: "no-store",
   });
-  if (!res.ok) return null;
+  if (!res.ok) return {};
   const xml = await res.text();
   const parser = new XMLParser({
     ignoreAttributes: false,
     attributeNamePrefix: "",
   });
   const data = parser.parse(xml);
-  const match = (data?.stations?.location ?? []).find(
-    (s) => s.id?.toLowerCase() === arpansaId.toLowerCase(),
-  );
-  return match ? parseFloat(match.index ?? 0) : null;
+  const map = {};
+  for (const s of data?.stations?.location ?? []) {
+    map[s.id?.toLowerCase()] = parseFloat(s.index ?? 0);
+  }
+  return map;
+}
+
+async function fetchWeather(city) {
+  const c = CITY_COORDS[city];
+  if (!c || !process.env.OPENWEATHER_API_KEY) return null;
+  try {
+    const res = await fetch(
+      `https://api.openweathermap.org/data/2.5/weather?lat=${c.lat}&lon=${c.lon}&appid=${process.env.OPENWEATHER_API_KEY}&units=metric`,
+      { cache: "no-store" },
+    );
+    if (!res.ok) return null;
+    const d = await res.json();
+    return {
+      temp: Math.round(d.main?.temp ?? 0),
+      feelsLike: Math.round(d.main?.feels_like ?? 0),
+      humidity: d.main?.humidity ?? 0,
+      windSpeed: Math.round((d.wind?.speed ?? 0) * 3.6),
+      description: d.weather?.[0]?.description ?? "",
+    };
+  } catch {
+    return null;
+  }
 }
 
 export async function GET(request) {
@@ -57,34 +93,19 @@ export async function GET(request) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  const CITY_ARPANSA = {
-    Melbourne: "Melbourne",
-    Sydney: "Sydney",
-    Brisbane: "Brisbane",
-    Adelaide: "Adelaide",
-    Perth: "Perth",
-    Darwin: "Darwin",
-    Hobart: "Kingston",
-    Canberra: "Canberra",
-    Townsville: "Townsville",
-    "Alice Springs": "Alice Springs",
-    "Gold Coast": "Gold Coast",
-    Newcastle: "Newcastle",
-    Emerald: "Emerald",
-  };
-
   try {
+    const arpansaMap = await fetchARPANSA();
+
     const subscriptions = await prisma.userLocationSubscription.findMany({
       where: {
         isActive: true,
-        user: { notifEnabled: true, reminderTime: { not: null } },
+        user: { notifEnabled: true, vapidSubscription: { not: null } },
       },
       include: { user: true, location: true },
     });
 
     const results = { sent: 0, skipped: 0, errors: 0 };
 
-    // Group by location to avoid fetching the same UV data multiple times
     const byCity = {};
     for (const sub of subscriptions) {
       const city = sub.location.locationName;
@@ -93,14 +114,12 @@ export async function GET(request) {
     }
 
     for (const [city, subs] of Object.entries(byCity)) {
-      const arpansaId = CITY_ARPANSA[city];
-      if (!arpansaId) continue;
-
-      const uv = await fetchUVForCity(arpansaId);
-      if (uv === null) continue;
+      const arpansaId = ARPANSA_NAMES[city]?.toLowerCase();
+      const uv = arpansaId ? (arpansaMap[arpansaId] ?? 0) : 0;
+      const weather = await fetchWeather(city);
 
       for (const sub of subs) {
-        const threshold = sub.user.alertThreshold ?? 6;
+        const threshold = sub.user.alertThreshold ?? 3;
         if (uv < threshold) {
           results.skipped++;
           continue;
@@ -108,25 +127,16 @@ export async function GET(request) {
 
         let pushSub;
         try {
-          pushSub = JSON.parse(sub.user.reminderTime);
+          pushSub = JSON.parse(sub.user.vapidSubscription);
         } catch {
           continue;
         }
 
-        const title = `☀ UV ${uv} in ${city} — ${UV_LEVEL_LABEL(uv)}`;
-        const body = UV_ADVICE(uv);
-        const payload = JSON.stringify({
-          title,
-          body,
-          icon: "/icons/icon-256.png",
-          url: "/",
-          tag: "uvibe-alert",
-        });
+        const payload = buildNotificationPayload(city, uv, weather);
 
         try {
-          await webpush.sendNotification(pushSub, payload);
+          await webpush.sendNotification(pushSub, JSON.stringify(payload));
 
-          // Log notification
           await prisma.notification
             .create({
               data: {
@@ -134,8 +144,8 @@ export async function GET(request) {
                 subscriptionId: sub.subscriptionId,
                 uvReadingId: 1,
                 notificationType: "uv_alert",
-                notificationTitle: title,
-                notificationMessage: body,
+                notificationTitle: payload.title,
+                notificationMessage: payload.body,
                 deliveryStatus: "delivered",
               },
             })
@@ -144,11 +154,10 @@ export async function GET(request) {
           results.sent++;
         } catch (err) {
           if (err.statusCode === 410 || err.statusCode === 404) {
-            // Subscription expired — clean up
             await prisma.user
               .update({
                 where: { pushToken: sub.user.pushToken },
-                data: { notifEnabled: false, reminderTime: null },
+                data: { notifEnabled: false, vapidSubscription: null },
               })
               .catch(() => {});
           }
