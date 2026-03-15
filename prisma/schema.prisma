@@ -1,5 +1,3 @@
-// prisma/schema.prisma
-
 generator client {
   provider = "prisma-client-js"
 }
@@ -27,7 +25,7 @@ model User {
 
 model Location {
   locationId   Int      @id @default(autoincrement()) @map("location_id")
-  locationName String   @map("location_name")
+  locationName String   @unique @map("location_name")
   latitude     Float
   longitude    Float
   postcode     String?
@@ -42,7 +40,7 @@ model Location {
 
 model UvRiskCategory {
   riskCategoryId Int      @id @default(autoincrement()) @map("risk_category_id")
-  categoryName   String   @map("category_name")
+  categoryName   String   @unique @map("category_name")
   minUv          Float    @map("min_uv")
   maxUv          Float    @map("max_uv")
   healthAdvice   String?  @map("health_advice")
