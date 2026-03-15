@@ -13,9 +13,10 @@ model User {
   ageGroup      String?   @map("age_group")
   skinType      String?   @map("skin_type")
   spfPreference Int?      @map("spf_preference")
-  notifEnabled  Boolean   @default(true) @map("notif_enabled")
-  reminderTime  String?   @map("reminder_time")
-  createdAt     DateTime  @default(now()) @map("created_at")
+  notifEnabled       Boolean   @default(true) @map("notif_enabled")
+  reminderTime       String?   @map("reminder_time")
+  vapidSubscription  String?   @map("vapid_subscription")
+  createdAt          DateTime  @default(now()) @map("created_at")
   updatedAt     DateTime  @updatedAt @map("updated_at")
 
   subscriptions UserLocationSubscription[]
