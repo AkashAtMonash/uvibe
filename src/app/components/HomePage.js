@@ -12,7 +12,6 @@ import {
   humanAlert,
   getDynamicInterval,
   simulateUV,
-  buildForecast,
   applyUVTheme,
 } from "@/utils/uv";
 
@@ -62,17 +61,23 @@ export default function HomePage({
   geoGranted,
   onRequestGeo,
   onSaveReading,
-  onNotifClick,
   onUVUpdate,
+  onRequestNotif,
+  onSyncPrefs,
+  sendTestNotification,
 }) {
   const [uv, setUv] = useState(0);
   const [weather, setWeather] = useState(null);
+  const [forecast, setForecast] = useState([]);
   const [loading, setLoading] = useState(true);
   const [wLoading, setWLoading] = useState(true);
   const [apiStatus, setApiStatus] = useState(null);
   const [time, setTime] = useState(null);
   const [mounted, setMounted] = useState(false);
   const timerRef = useRef(null);
+  const [showNotifPanel, setShowNotifPanel] = useState(false);
+  const [notifError, setNotifError] = useState(null);
+  const [testResult, setTestResult] = useState(null);
 
   const fetchUV = useCallback(async () => {
     setLoading(true);
@@ -127,18 +132,51 @@ export default function HomePage({
     setWLoading(false);
   }, [city]);
 
+  const fetchForecast = useCallback(async () => {
+    try {
+      const res = await fetch(`/api/uvgraph?city=${encodeURIComponent(city)}`);
+      if (!res.ok) throw new Error();
+      const data = await res.json();
+      if (!data.hourly) throw new Error();
+      // Build strip: show hours around now (3 before, rest after)
+      const now = new Date();
+      const currentH = String(now.getHours()).padStart(2, "0");
+      const currentIdx = data.hourly.findIndex(
+        (h) => h.hour?.slice(-2) === currentH,
+      );
+      const startIdx = Math.max(0, currentIdx - 2);
+      const strip = data.hourly.slice(startIdx, startIdx + 10).map((h, i) => {
+        const val = h.measured ?? h.forecast ?? 0;
+        return {
+          label:
+            i === currentIdx - startIdx
+              ? "NOW"
+              : (h.hour?.slice(-5) ?? `${i}h`),
+          val: parseFloat(val.toFixed(1)),
+          lv: getLevel(val),
+          now: i === currentIdx - startIdx,
+        };
+      });
+      setForecast(strip);
+    } catch {
+      setForecast([]);
+    }
+  }, [city]);
+
   useEffect(() => {
     fetchUV();
     fetchWeather();
+    fetchForecast();
     timerRef.current = setInterval(
       () => {
         fetchUV();
         fetchWeather();
+        fetchForecast();
       },
       5 * 60 * 1000,
     );
     return () => clearInterval(timerRef.current);
-  }, [fetchUV, fetchWeather]);
+  }, [fetchUV, fetchWeather, fetchForecast]);
 
   useEffect(() => {
     setMounted(true);
@@ -155,7 +193,6 @@ export default function HomePage({
   const burn = calcBurn(uv, prefs.skinType, prefs.spf);
   const alert = humanAlert(uv, burn, city);
   const interval = getDynamicInterval(uv);
-  const forecast = mounted ? buildForecast(city) : [];
   const dateStr = time
     ? time.toLocaleDateString("en-AU", {
         weekday: "short",
@@ -193,15 +230,233 @@ export default function HomePage({
         >
           ◎
         </button>
-        <button
-          className="notif-bell"
-          onClick={onNotifClick}
-          aria-label="UV notifications"
-          style={{ flexShrink: 0, cursor: "pointer" }}
-        >
-          🔔
-          {uv >= 8 && <div className="notif-badge" />}
-        </button>
+        <div style={{ position: "relative", flexShrink: 0 }}>
+          <button
+            className="notif-bell"
+            onClick={() => {
+              setShowNotifPanel((p) => !p);
+              setNotifError(null);
+              setTestResult(null);
+            }}
+            aria-label="UV notifications"
+            style={{
+              cursor: "pointer",
+              background: showNotifPanel ? "var(--uv-10)" : undefined,
+              borderColor: showNotifPanel ? "var(--uv)" : undefined,
+            }}
+          >
+            🔔
+            {uv >= 8 && <div className="notif-badge" />}
+          </button>
+
+          {showNotifPanel && (
+            <>
+              <div
+                style={{ position: "fixed", inset: 0, zIndex: 399 }}
+                onClick={() => setShowNotifPanel(false)}
+              />
+              <div
+                style={{
+                  position: "absolute",
+                  top: "calc(100% + 8px)",
+                  right: 0,
+                  width: 300,
+                  zIndex: 400,
+                  background: "var(--bg-2)",
+                  border: "1px solid var(--border-2)",
+                  borderRadius: "var(--r)",
+                  boxShadow: "0 16px 48px rgba(0,0,0,0.5)",
+                  overflow: "hidden",
+                }}
+              >
+                <div
+                  style={{
+                    padding: "14px 16px 10px",
+                    borderBottom: "1px solid var(--border)",
+                  }}
+                >
+                  <div
+                    style={{
+                      fontSize: 13,
+                      fontWeight: 700,
+                      color: "var(--fg)",
+                      marginBottom: 2,
+                    }}
+                  >
+                    UV Notifications
+                  </div>
+                  <div
+                    style={{
+                      fontSize: 11,
+                      fontFamily: "var(--font-mono)",
+                      color: "var(--fg-3)",
+                    }}
+                  >
+                    {city} · UV {uv.toFixed(1)}
+                  </div>
+                </div>
+
+                <div
+                  style={{
+                    padding: "12px 16px",
+                    borderBottom: "1px solid var(--border)",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "space-between",
+                    gap: 12,
+                  }}
+                >
+                  <div>
+                    <div
+                      style={{
+                        fontSize: 13,
+                        fontWeight: 600,
+                        color: "var(--fg)",
+                      }}
+                    >
+                      UV Alerts
+                    </div>
+                    <div style={{ fontSize: 11, color: "var(--fg-3)" }}>
+                      Notify when UV is high
+                    </div>
+                  </div>
+                  <label
+                    style={{
+                      position: "relative",
+                      width: 48,
+                      height: 28,
+                      flexShrink: 0,
+                      cursor: "pointer",
+                    }}
+                  >
+                    <input
+                      type="checkbox"
+                      checked={prefs.notifEnabled ?? false}
+                      style={{
+                        opacity: 0,
+                        width: 0,
+                        height: 0,
+                        position: "absolute",
+                      }}
+                      onChange={async (e) => {
+                        const val = e.target.checked;
+                        setNotifError(null);
+                        if (val) {
+                          const result = await onRequestNotif?.({
+                            ...prefs,
+                            notifEnabled: true,
+                          });
+                          if (result?.error) {
+                            setNotifError(result.error);
+                            return;
+                          }
+                          onSyncPrefs?.({ ...prefs, notifEnabled: true });
+                        } else {
+                          onSyncPrefs?.({ ...prefs, notifEnabled: false });
+                        }
+                      }}
+                    />
+                    <div
+                      style={{
+                        position: "absolute",
+                        inset: 0,
+                        borderRadius: 28,
+                        background:
+                          (prefs.notifEnabled ?? false)
+                            ? "var(--uv)"
+                            : "var(--bg-4)",
+                        border: `1px solid ${(prefs.notifEnabled ?? false) ? "var(--uv)" : "var(--border)"}`,
+                        transition: "all 0.15s",
+                      }}
+                    />
+                    <div
+                      style={{
+                        position: "absolute",
+                        top: 3,
+                        left: 3,
+                        width: 20,
+                        height: 20,
+                        borderRadius: "50%",
+                        background: "var(--fg)",
+                        transform:
+                          (prefs.notifEnabled ?? false)
+                            ? "translateX(20px)"
+                            : "translateX(0)",
+                        transition: "transform 0.15s var(--ease)",
+                        boxShadow: "0 1px 4px rgba(0,0,0,0.3)",
+                      }}
+                    />
+                  </label>
+                </div>
+
+                {notifError && (
+                  <div
+                    style={{
+                      padding: "8px 16px",
+                      fontSize: 11,
+                      fontFamily: "var(--font-mono)",
+                      color: "#ef4444",
+                      borderBottom: "1px solid var(--border)",
+                    }}
+                  >
+                    ✗ {notifError}
+                  </div>
+                )}
+
+                <div style={{ padding: 12 }}>
+                  <button
+                    onClick={async () => {
+                      setTestResult("Sending…");
+                      const result = await sendTestNotification?.();
+                      setTestResult(
+                        result?.success
+                          ? "✓ Notification sent!"
+                          : `✗ ${result?.error ?? "Failed"}`,
+                      );
+                      setTimeout(() => setTestResult(null), 3000);
+                    }}
+                    style={{
+                      width: "100%",
+                      padding: "10px 14px",
+                      borderRadius: "var(--r-sm)",
+                      border: "1px solid var(--border-2)",
+                      background: "var(--surface)",
+                      color: "var(--fg-2)",
+                      fontSize: 12,
+                      fontWeight: 600,
+                      fontFamily: "var(--font-display)",
+                      cursor: "pointer",
+                      transition: "all 0.15s",
+                    }}
+                  >
+                    🔔 Send Test Notification
+                  </button>
+                  {testResult && (
+                    <div
+                      style={{
+                        marginTop: 8,
+                        padding: "7px 12px",
+                        borderRadius: "var(--r-sm)",
+                        fontSize: 11,
+                        fontFamily: "var(--font-mono)",
+                        textAlign: "center",
+                        background: testResult.startsWith("✓")
+                          ? "rgba(34,211,170,0.1)"
+                          : "rgba(239,68,68,0.1)",
+                        color: testResult.startsWith("✓")
+                          ? "#22d3aa"
+                          : "#ef4444",
+                        border: `1px solid ${testResult.startsWith("✓") ? "rgba(34,211,170,0.3)" : "rgba(239,68,68,0.3)"}`,
+                      }}
+                    >
+                      {testResult}
+                    </div>
+                  )}
+                </div>
+              </div>
+            </>
+          )}
+        </div>
       </div>
 
       {/* ── Date / state ── */}
@@ -531,6 +786,56 @@ export default function HomePage({
 
       {/* ── UV Graph ── */}
       <UVGraph city={city} lv={lv} />
+
+      {/* ── Hourly Forecast ── */}
+      <div className="anim-fade-up card" style={{ marginBottom: 14 }}>
+        <div className="divider-label label-sm">Hourly Forecast</div>
+        {forecast.length === 0 ? (
+          <div style={{ display: "flex", gap: 8 }}>
+            {Array(8)
+              .fill(0)
+              .map((_, i) => (
+                <div
+                  key={i}
+                  className="forecast-chip skeleton"
+                  style={{ minWidth: 52, height: 72 }}
+                />
+              ))}
+          </div>
+        ) : (
+          <div className="forecast-scroll" role="list">
+            {forecast.map((f, i) => (
+              <div
+                key={i}
+                role="listitem"
+                className={`forecast-chip ${f.now ? "now" : ""}`}
+                style={
+                  f.now
+                    ? {
+                        borderColor: `${f.lv.color}60`,
+                        background: `${f.lv.color}12`,
+                      }
+                    : {}
+                }
+              >
+                <div className="forecast-time">{f.label}</div>
+                <div className="forecast-uv-val" style={{ color: f.lv.color }}>
+                  {f.val}
+                </div>
+                <div className="forecast-bar-track">
+                  <div
+                    className="forecast-bar-fill"
+                    style={{
+                      width: `${Math.min(f.val / 13, 1) * 100}%`,
+                      background: f.lv.color,
+                    }}
+                  />
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
 
       {/* ── UV Risk Scale ── */}
       <div className="anim-fade-up card" style={{ marginBottom: 14 }}>

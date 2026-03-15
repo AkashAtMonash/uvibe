@@ -13,7 +13,16 @@ import PreventionPage from "@/app/components/PreventionPage";
 import { nearestCity, getLevel, applyUVTheme } from "@/utils/uv";
 import { useUserSync } from "@/hooks/useUserSync";
 
-// TODO: replace with actual built-out pages
+const DEFAULT_PREFS = {
+  skinType: "III",
+  spf: 50,
+  notifEnabled: false,
+  reapplyReminder: false,
+  alertThreshold: 6,
+  name: "",
+  ageRange: "",
+};
+
 function BlankPage({ label }) {
   return <div className="blank-page">{label.toUpperCase()}</div>;
 }
@@ -29,61 +38,54 @@ function useIsMobile() {
   return mobile;
 }
 
-function readStorage() {
-  if (typeof window === "undefined") return {};
-  try {
-    const loc = localStorage.getItem("uvibe_location");
-    const prefs = localStorage.getItem("uvibe_prefs");
-    const theme = localStorage.getItem("uvibe_theme");
-    const contrast = localStorage.getItem("uvibe_contrast");
-    const page = localStorage.getItem("uvibe_page");
-    const location = loc ? JSON.parse(loc) : null;
-    return {
-      city: location?.city ?? "Melbourne",
-      granted: location?.granted ?? false,
-      hasLocation: !!loc,
-      prefs: prefs ? JSON.parse(prefs) : null,
-      theme: theme ?? "black",
-      contrast: contrast === "true",
-      page: page ?? "home",
-    };
-  } catch {
-    return {};
-  }
-}
-
 export default function Page() {
-  const stored = readStorage();
-
-  const [screen, setScreen] = useState(stored.hasLocation ? "app" : "loading");
-  const [page, setPage] = useState(stored.page ?? "home");
-  const [city, setCity] = useState(stored.city ?? "Melbourne");
+  // All state starts with server-safe defaults — localStorage hydration happens in useEffect
+  const [screen, setScreen] = useState("loading");
+  const [page, setPage] = useState("home");
+  const [city, setCity] = useState("Melbourne");
   const [showModal, setShowModal] = useState(false);
-  const [geoGranted, setGeoGranted] = useState(stored.granted ?? false);
-  const [theme, setTheme] = useState(stored.theme ?? "black");
-  const [contrast, setContrast] = useState(stored.contrast ?? false);
-  const [prefs, setPrefs] = useState(
-    stored.prefs ?? {
-      skinType: "III",
-      spf: 50,
-      notifEnabled: false,
-      reapplyReminder: false,
-      alertThreshold: 6,
-      name: "",
-      ageRange: "",
-    },
-  );
+  const [geoGranted, setGeoGranted] = useState(false);
+  const [theme, setTheme] = useState("black");
+  const [contrast, setContrast] = useState(false);
+  const [prefs, setPrefs] = useState(DEFAULT_PREFS);
   const [uv, setUv] = useState(0);
   const isMobile = useIsMobile();
 
-  const { requestAndRegister, syncPrefs, syncCity, saveReading } =
-    useUserSync();
+  const {
+    requestAndRegister,
+    syncPrefs,
+    syncCity,
+    saveReading,
+    sendTestNotification,
+  } = useUserSync();
   const lv = getLevel(uv);
 
+  // Single hydration effect — reads localStorage once on mount, sets all state, then reveals UI
   useEffect(() => {
-    if (screen !== "loading") return;
-    setScreen(isMobile ? "modal" : "landing");
-  }, [isMobile, screen]);
+    try {
+      const loc = localStorage.getItem("uvibe_location");
+      const savedPg = localStorage.getItem("uvibe_page");
+      const savedPrf = localStorage.getItem("uvibe_prefs");
+      const savedThm = localStorage.getItem("uvibe_theme");
+      const savedCtr = localStorage.getItem("uvibe_contrast");
+
+      if (savedPg) setPage(savedPg);
+      if (savedThm) setTheme(savedThm);
+      if (savedCtr) setContrast(savedCtr === "true");
+      if (savedPrf) setPrefs(JSON.parse(savedPrf));
+
+      if (loc) {
+        const { city: c, granted } = JSON.parse(loc);
+        setCity(c);
+        setGeoGranted(granted);
+        setScreen("app");
+      } else {
+        setScreen(window.innerWidth < 1100 ? "modal" : "landing");
+      }
+    } catch {
+      setScreen("landing");
+    }
+  }, []);
 
   useEffect(() => {
     if (screen === "loading") return;
@@ -129,6 +131,7 @@ export default function Page() {
           "uvibe_location",
           JSON.stringify({ city: detected, granted: true }),
         );
+        syncCity(detected);
         setScreen("app");
       },
       () => {
@@ -140,7 +143,7 @@ export default function Page() {
         setScreen("app");
       },
     );
-  }, []);
+  }, [syncCity]);
 
   const handleDeny = useCallback(() => {
     setShowModal(false);
@@ -149,8 +152,9 @@ export default function Page() {
       "uvibe_location",
       JSON.stringify({ city: "Melbourne", granted: false }),
     );
+    syncCity("Melbourne");
     setScreen("app");
-  }, []);
+  }, [syncCity]);
 
   const handleEnter = useCallback(() => {
     const saved = localStorage.getItem("uvibe_location");
@@ -162,6 +166,15 @@ export default function Page() {
     }
   }, []);
 
+  const handleSyncPrefs = useCallback(
+    (updated) => {
+      setPrefs(updated);
+      syncPrefs(updated);
+    },
+    [syncPrefs],
+  );
+
+  // Render nothing while hydrating — prevents any flash or mismatch
   if (screen === "loading") return null;
 
   if (screen === "landing") {
@@ -205,7 +218,10 @@ export default function Page() {
               geoGranted={geoGranted}
               onRequestGeo={() => setShowModal(true)}
               onSaveReading={saveReading}
-              onNotifClick={() => setPage("settings")}
+              onUVUpdate={setUv}
+              onRequestNotif={requestAndRegister}
+              onSyncPrefs={handleSyncPrefs}
+              sendTestNotification={sendTestNotification}
             />
           )}
           {page === "awareness" && <BlankPage label="Awareness" />}
@@ -220,8 +236,9 @@ export default function Page() {
               setTheme={setTheme}
               contrast={contrast}
               setContrast={setContrast}
-              onRequestNotif={(p) => requestAndRegister(p)}
-              onSyncPrefs={syncPrefs}
+              onRequestNotif={requestAndRegister}
+              onSyncPrefs={handleSyncPrefs}
+              onTestNotif={sendTestNotification}
             />
           )}
         </div>

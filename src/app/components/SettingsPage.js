@@ -1,4 +1,5 @@
 "use client";
+// src/components/SettingsPage.js
 
 import { useState, useEffect, useRef } from "react";
 
@@ -118,7 +119,9 @@ export default function SettingsPage({
   setContrast,
   onRequestNotif,
   onSyncPrefs,
+  onTestNotif,
 }) {
+  const [testResult, setTestResult] = useState(null);
   const [name, setName] = useState("");
   const [ageRange, setAgeRange] = useState("");
   const [skinType, setSkinType] = useState("III");
@@ -174,10 +177,20 @@ export default function SettingsPage({
     onSyncPrefs?.(updated);
   };
 
+  const [notifError, setNotifError] = useState(null);
+
   const handleNotifToggle = async (val) => {
     setNotif(val);
     autoSave({ notifEnabled: val });
-    if (val) await onRequestNotif?.({ ...prefs, notifEnabled: true });
+    if (val) {
+      setNotifError(null);
+      const result = await onRequestNotif?.({ ...prefs, notifEnabled: true });
+      if (result?.error) {
+        setNotifError(result.error);
+        setNotif(false);
+        autoSave({ notifEnabled: false });
+      }
+    }
   };
 
   const handleReapplyToggle = (val) => {
@@ -470,6 +483,19 @@ export default function SettingsPage({
             />
           }
         />
+        {notifError && (
+          <div
+            style={{
+              padding: "8px 20px 12px",
+              fontSize: 11,
+              fontFamily: "var(--font-mono)",
+              color: "#ef4444",
+              lineHeight: 1.6,
+            }}
+          >
+            ✗ {notifError}
+          </div>
+        )}
         <Row
           label="Reapplication Reminders"
           desc="Periodic reminders to reapply sunscreen based on UV level"
@@ -497,6 +523,43 @@ export default function SettingsPage({
             </select>
           }
         />
+        <div style={{ padding: "12px 20px 16px" }}>
+          <button
+            className="btn btn-ghost"
+            style={{ width: "100%", fontSize: 13 }}
+            onClick={async () => {
+              setTestResult("Sending…");
+              const result = await onTestNotif?.();
+              setTestResult(
+                result?.success
+                  ? "✓ Test notification sent!"
+                  : `✗ ${result?.error ?? "Failed"}`,
+              );
+              setTimeout(() => setTestResult(null), 4000);
+            }}
+          >
+            🔔 Send Test Notification
+          </button>
+          {testResult && (
+            <div
+              style={{
+                marginTop: 8,
+                padding: "8px 12px",
+                borderRadius: "var(--r-sm)",
+                fontSize: 12,
+                fontFamily: "var(--font-mono)",
+                textAlign: "center",
+                background: testResult.startsWith("✓")
+                  ? "rgba(34,211,170,0.1)"
+                  : "rgba(239,68,68,0.1)",
+                color: testResult.startsWith("✓") ? "#22d3aa" : "#ef4444",
+                border: `1px solid ${testResult.startsWith("✓") ? "rgba(34,211,170,0.3)" : "rgba(239,68,68,0.3)"}`,
+              }}
+            >
+              {testResult}
+            </div>
+          )}
+        </div>
       </Section>
 
       <Section title="Data & Privacy">
@@ -566,7 +629,6 @@ export default function SettingsPage({
             <br />
             Weather data by{" "}
             <strong style={{ color: "var(--fg)" }}>OpenWeather</strong>.<br />
-            Built for FIT5120 · Monash University 2025.
           </div>
         </div>
       </div>
