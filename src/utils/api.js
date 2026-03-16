@@ -4,7 +4,7 @@
  */
 
 const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL || "http://localhost:8000";
-
+const PY_BACKEND_URL = process.env.BACKEND_URL || "http://localhost:8000";
 // ─────────────────────────────────────────────────────────
 // UV Data
 // ─────────────────────────────────────────────────────────
@@ -62,7 +62,7 @@ export async function fetchARPANSAStations() {
 export async function analyzeSkin(imageFile) {
   const form = new FormData();
   form.append("file", imageFile);
-  const res = await fetch(`${BACKEND_URL}/api/ml/analyze-skin`, {
+  const res = await fetch(`${process.env.BACKEND_URL}/api/ml/analyze-skin`, {
     method: "POST",
     body: form,
   });

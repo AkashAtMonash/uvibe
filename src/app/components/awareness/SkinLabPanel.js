@@ -2,8 +2,19 @@
 
 import { useState, useRef, useCallback } from "react";
 import { Upload, Camera, X, Loader2, Eye, ShieldCheck, Zap } from "lucide-react";
-import { analyzeSkin } from "@/utils/api";
 import { FITZPATRICK_TYPES } from "./data";
+
+async function analyzeSkin(file) {
+  const form = new FormData();
+  form.append("file", file);
+  const res = await fetch("/api/analyze-skin", { method: "POST", body: form });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.error || "ML analysis failed");
+  }
+  return res.json();
+}
+
 
 export default function SkinLabPanel() {
   const [image, setImage] = useState(null);
