@@ -55,8 +55,8 @@ export default function UVRing({ uv, color, size = 220, loading = false }) {
           cy={size / 2}
           r={r}
           fill="none"
-          stroke="var(--border-2)"
-          strokeWidth={10}
+          stroke="var(--ring-bg, rgba(0,0,0,0.05))"
+          strokeWidth={14}
         />
         <circle
           cx={size / 2}
@@ -64,13 +64,13 @@ export default function UVRing({ uv, color, size = 220, loading = false }) {
           r={r}
           fill="none"
           stroke={color}
-          strokeWidth={10}
+          strokeWidth={14}
           strokeLinecap="round"
           strokeDasharray={`${circ * pct} ${circ - circ * pct}`}
           style={{
             transition:
-              "stroke-dasharray 1.4s cubic-bezier(0.22,1,0.36,1), stroke 0.8s",
-            filter: `drop-shadow(0 0 10px ${color}88)`,
+              "stroke-dasharray 1.4s cubic-bezier(0.4,0,0.2,1), stroke 0.8s",
+            filter: `var(--ring-shadow, drop-shadow(0 4px 16px ${color}66))`,
           }}
         />
       </svg>

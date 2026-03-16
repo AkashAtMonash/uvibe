@@ -54,129 +54,112 @@ export default function PreventionPage({ city, uv: parentUv, prefs }) {
 
   const lv = getLevel(uv);
 
+  const TAB_ICONS = {
+    sunscreen: "🧴",
+    reminder: "⏰",
+    clothing: "👕",
+    guide: "📋",
+  };
+
   return (
-    <div
-      style={{
-        display: "flex",
-        flexDirection: "column",
-        height: "100%",
-        overflow: "hidden",
-      }}
-    >
-      {/* ── Header ── */}
+    <div style={{ display: "flex", flexDirection: "column", height: "100%", overflow: "hidden" }}>
+
+      {/* ── Hero Header ── */}
       <div
         style={{
           padding: "20px 20px 0",
-          borderBottom: "1px solid var(--border)",
-          background: "color-mix(in srgb, var(--bg) 85%, transparent)",
+          borderBottom: "1px solid var(--border, rgba(0,0,0,0.08))",
+          background: `linear-gradient(135deg, ${lv.dim || "rgba(245,158,11,0.06)"} 0%, var(--bg, #f8f9fa) 100%)`,
           backdropFilter: "blur(20px)",
           flexShrink: 0,
           position: "relative",
           zIndex: 10,
         }}
       >
-        <div
-          style={{
-            display: "flex",
-            alignItems: "flex-start",
-            justifyContent: "space-between",
-            marginBottom: 16,
-          }}
-        >
+        {/* Title row */}
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 16 }}>
           <div>
-            <div
-              style={{
-                fontSize: 24,
-                fontWeight: 800,
-                letterSpacing: -0.6,
-                color: "var(--fg)",
-                marginBottom: 3,
-              }}
-            >
+            <div style={{ fontSize: 24, fontWeight: 800, letterSpacing: -0.6, color: "var(--fg, #111)", marginBottom: 3 }}>
               Prevention
             </div>
-            <div
-              style={{
-                fontSize: 11,
-                fontFamily: "var(--font-mono)",
-                color: "var(--fg-3)",
-              }}
-            >
-              {city ?? "Melbourne"} · UV {loading ? "—" : uv.toFixed(1)} ·{" "}
-              <span style={{ color: lv.color }}>{lv.name}</span>
+            <div style={{ fontSize: 11, fontFamily: "monospace", color: "var(--fg-3, #9ca3af)" }}>
+              {city ?? "Melbourne"} · UV {loading ? "…" : uv.toFixed(1)} ·{" "}
+              <span style={{ color: lv.color, fontWeight: 700 }}>{lv.name}</span>
             </div>
           </div>
+
+          {/* UV badge */}
           <div
             style={{
-              padding: "8px 14px",
-              borderRadius: "var(--r-sm)",
-              background: lv.dim,
-              border: `1px solid ${lv.color}50`,
-              fontSize: 15,
-              fontWeight: 800,
-              fontFamily: "var(--font-mono)",
+              padding: "10px 16px",
+              borderRadius: 14,
+              background: lv.dim || "rgba(245,158,11,0.1)",
+              border: `1.5px solid ${lv.color}50`,
+              fontSize: 18,
+              fontWeight: 900,
+              fontFamily: "monospace",
               color: lv.color,
-              flexShrink: 0,
+              minWidth: 64,
+              textAlign: "center",
+              boxShadow: `0 4px 16px ${lv.color}20`,
               transition: "all 0.6s",
             }}
           >
-            UV {loading ? "·" : uv.toFixed(1)}
+            {loading ? "…" : uv.toFixed(1)}
+            <div style={{ fontSize: 9, letterSpacing: 1.5, textTransform: "uppercase", fontWeight: 700, opacity: 0.7, marginTop: 1 }}>
+              {lv.name}
+            </div>
           </div>
         </div>
 
-        {/* Tabs */}
-        <div
-          style={{
-            display: "flex",
-            gap: 0,
-            overflowX: "auto",
-            scrollbarWidth: "none",
-          }}
-        >
-          {PREV_TABS.map((tab) => (
-            <button
-              key={tab.id}
-              onClick={() => handleTab(tab.id)}
-              style={{
-                display: "flex",
-                alignItems: "center",
-                gap: 6,
-                padding: "11px 18px",
-                fontSize: 13,
-                fontWeight: activeTab === tab.id ? 700 : 500,
-                fontFamily: "var(--font-display)",
-                color: activeTab === tab.id ? lv.color : "var(--fg-3)",
-                background: "transparent",
-                border: "none",
-                borderBottom: `2px solid ${activeTab === tab.id ? lv.color : "transparent"}`,
-                cursor: "pointer",
-                whiteSpace: "nowrap",
-                transition: "all 0.15s",
-                flexShrink: 0,
-              }}
-            >
-              <span>{tab.icon}</span>
-              <span>{tab.label}</span>
-            </button>
-          ))}
+        {/* Tab bar — pill style */}
+        <div style={{ display: "flex", gap: 4, overflowX: "auto", scrollbarWidth: "none", paddingBottom: 0 }}>
+          {PREV_TABS.map((tab) => {
+            const isActive = activeTab === tab.id;
+            return (
+              <button
+                key={tab.id}
+                onClick={() => handleTab(tab.id)}
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 5,
+                  padding: "9px 16px",
+                  fontSize: 13,
+                  fontWeight: isActive ? 800 : 500,
+                  color: isActive ? lv.color : "var(--fg-3, #9ca3af)",
+                  background: isActive ? `${lv.color}15` : "transparent",
+                  border: "none",
+                  borderBottom: `2.5px solid ${isActive ? lv.color : "transparent"}`,
+                  borderRadius: "10px 10px 0 0",
+                  cursor: "pointer",
+                  whiteSpace: "nowrap",
+                  transition: "all 0.15s",
+                  flexShrink: 0,
+                }}
+              >
+                <span style={{ fontSize: 15 }}>{TAB_ICONS[tab.id]}</span>
+                <span>{tab.label}</span>
+              </button>
+            );
+          })}
         </div>
       </div>
 
-      {/* ── Body ── */}
+      {/* ── Tab content ── */}
       <div
         style={{
           flex: 1,
           overflowY: "auto",
           overflowX: "hidden",
           padding: "18px 18px 100px",
+          scrollbarWidth: "none",
         }}
       >
-        {activeTab === "sunscreen" && (
-          <SunscreenTab lv={lv} uv={uv} prefs={prefs} />
-        )}
-        {activeTab === "reminder" && <ReminderTab lv={lv} uv={uv} />}
-        {activeTab === "clothing" && <ClothingTab lv={lv} uv={uv} />}
-        {activeTab === "guide" && <GuideTab lv={lv} />}
+        {activeTab === "sunscreen" && <SunscreenTab lv={lv} uv={uv} prefs={prefs} />}
+        {activeTab === "reminder"  && <ReminderTab  lv={lv} uv={uv} />}
+        {activeTab === "clothing"  && <ClothingTab  lv={lv} uv={uv} />}
+        {activeTab === "guide"     && <GuideTab lv={lv} />}
       </div>
     </div>
   );

@@ -1,11 +1,15 @@
 "use client";
 
+import { MapPin } from "lucide-react";
+
 export default function LocationModal({ onAllow, onDeny }) {
   return (
     <div className="modal-overlay" role="dialog" aria-modal="true">
       <div className="modal">
-        <div className="modal-icon">◎</div>
-        <div className="modal-title">Your Location</div>
+        <div className="modal-icon" style={{ display: 'flex', color: 'var(--uv-color)' }}>
+          <MapPin size={32} strokeWidth={2} />
+        </div>
+        <div className="modal-title">Use Your Location?</div>
         <div className="modal-desc">
           UVibe finds your nearest ARPANSA UV monitoring station to deliver
           real-time, localised UV data.
@@ -22,7 +26,16 @@ export default function LocationModal({ onAllow, onDeny }) {
           >
             Use Melbourne
           </button>
-          <button className="btn btn-uv" onClick={onAllow} style={{ flex: 2 }}>
+          <button
+            className="btn btn-primary"
+            onClick={onAllow}
+            aria-label="Allow location access"
+            style={{
+              background: "linear-gradient(135deg, #F59E0B, #FBBF24)",
+              color: "#FFFFFF",
+              boxShadow: "0 4px 16px rgba(245, 158, 11, 0.3)"
+            }}
+          >
             Allow Location
           </button>
         </div>

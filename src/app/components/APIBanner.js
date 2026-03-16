@@ -1,17 +1,19 @@
 "use client";
 
+import { AlertTriangle } from "lucide-react";
+
 const CFG = {
   fallback: {
     msg: "ARPANSA offline — showing Open-Meteo data",
-    color: "#fbbf24",
-    bg: "rgba(251,191,36,0.08)",
-    border: "rgba(251,191,36,0.2)",
+    color: "var(--api-fallback-color)",
+    bg: "var(--api-fallback-bg)",
+    border: "var(--api-fallback-border)",
   },
   error: {
     msg: "All UV feeds unavailable — showing estimated reading",
-    color: "#ef4444",
-    bg: "rgba(239,68,68,0.08)",
-    border: "rgba(239,68,68,0.2)",
+    color: "var(--api-error-color)",
+    bg: "var(--api-error-bg)",
+    border: "var(--api-error-border)",
   },
 };
 
@@ -28,7 +30,7 @@ export default function APIBanner({ status }) {
         color: c.color,
       }}
     >
-      <span>⚠</span>
+      <span style={{ display: 'flex' }}><AlertTriangle size={16} strokeWidth={2.5} /></span>
       {c.msg}
     </div>
   );
