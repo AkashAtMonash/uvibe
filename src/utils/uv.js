@@ -67,19 +67,13 @@ export const UV_LEVELS = [
   },
 ];
 
-// Burn time constants (minutes to burn at UVI 1, unprotected skin)
-// Australian-calibrated values using WHO/ARPANSA Fitzpatrick scale formula: burnMin = TS / UVI
-// Adjusted with 0.44 Australian factor to reflect thinner Southern Hemisphere ozone layer
-// Research basis: "sunburn in as little as 8 min" at extreme UV in Australia (PMC11688272)
-// At UVI 11: Type I = 3 min, Type II = 4 min, Type III = 8 min — matches ARPANSA standard
-// Reference: WHO Global Solar UV Index guide (2002), ARPANSA UV dose guidance
 const FITZPATRICK = [
-  { type: "I", label: "Type I", ts: 29 }, // Always burns, never tans — 3 min at UVI 11
-  { type: "II", label: "Type II", ts: 44 }, // Usually burns, rarely tans — 4 min at UVI 11
-  { type: "III", label: "Type III", ts: 88 }, // Sometimes burns, always tans — 8 min at UVI 11
-  { type: "IV", label: "Type IV", ts: 132 }, // Rarely burns, always tans — 12 min at UVI 11
-  { type: "V", label: "Type V", ts: 176 }, // Very rarely burns — 16 min at UVI 11
-  { type: "VI", label: "Type VI", ts: 220 }, // Never burns — 20 min at UVI 11
+  { type: "I", label: "Type I", ts: 29 },
+  { type: "II", label: "Type II", ts: 44 },
+  { type: "III", label: "Type III", ts: 88 },
+  { type: "IV", label: "Type IV", ts: 132 },
+  { type: "V", label: "Type V", ts: 176 },
+  { type: "VI", label: "Type VI", ts: 220 },
 ];
 
 const BASE_UV = {
@@ -111,12 +105,6 @@ export function applyUVTheme(level) {
   root.style.setProperty("--uv-glow", level.glow || UV_LEVELS[0].glow);
 }
 
-// Calculates time to skin damage based on WHO/ARPANSA burn time formula
-// bare:  TS / UVI  (unprotected skin, Australian-calibrated)
-// prot:  bare × SPF × 0.4 (real-world SPF factor — people apply ~40% of test dose)
-//        Cancer Council AU notes most people under-apply sunscreen, reducing effective SPF
-// Reference: Cancer Council Australia sunscreen application guide
-// No floor applied — medically accurate values are preserved
 export function calcBurn(uv, skinType = "III", spf = 50) {
   if (!uv || uv <= 0) return null;
   const f = FITZPATRICK.find((f) => f.type === skinType);
@@ -126,11 +114,6 @@ export function calcBurn(uv, skinType = "III", spf = 50) {
   return { bare: Math.max(1, bare), prot: Math.max(1, prot) };
 }
 
-// Human-language alerts aligned with Cancer Council Australia and ARPANSA guidance
-// Sources:
-//   ARPANSA UV index guide: https://www.arpansa.gov.au/user-guide-uv-index-meter
-//   Cancer Council Australia: https://www.cancer.org.au/cancer-information/causes-and-prevention/sun-safety
-//   Research: "sunburn can develop in as little as 8 min" in Australian summer (PMC11688272)
 export function humanAlert(uv, burn, city) {
   if (!burn || uv <= 0) {
     return `UV data loaded for ${city}. Check back during daylight hours.`;
@@ -150,8 +133,6 @@ export function humanAlert(uv, burn, city) {
   return `Extreme UV ${uv} in ${city}. Permanent skin damage in as little as ${burn.bare} min. Stay indoors or in full shade. SPF 50+ mandatory.`;
 }
 
-// Reapplication intervals based on Cancer Council Australia guidelines
-// Source: https://www.cancer.org.au/cancer-information/causes-and-prevention/sun-safety/sunscreen
 export function getDynamicInterval(uv) {
   if (uv >= 11)
     return {
@@ -210,31 +191,4 @@ export function simulateUV(city) {
       ((BASE_UV[city] ?? 8) * mod + (Math.random() - 0.5) * 0.4).toFixed(1),
     ),
   );
-}
-
-export function buildForecast(city) {
-  return Array.from({ length: 24 }, (_, i) => {
-    const h = new Date();
-    // Start from midnight of the current day to show a full 24h curve
-    h.setHours(0, 0, 0, 0);
-    h.setHours(i);
-    const hr = h.getHours();
-
-    // Smooth bell curve modifier for sunlight
-    let mod = 0.02; // baseline night
-    if (hr > 6 && hr < 19) {
-      // Create a parabolic curve peaking at 1 PM (hour 13)
-      const distFromNoon = Math.abs(hr - 13);
-      mod = Math.max(0.05, 1 - (distFromNoon / 6.5) ** 2);
-    }
-
-    const baseUV = BASE_UV[city] ?? 8;
-    // Add tiny bit of noise but keeping it mostly smooth
-    const val = Math.max(0, parseFloat((baseUV * mod + (Math.random() - 0.5) * 0.15).toFixed(1)));
-
-    const isNow = new Date().getHours() === hr;
-    const lbl = hr === 0 ? "12am" : `${hr > 12 ? hr - 12 : hr || 12}${hr >= 12 ? "pm" : "am"}`;
-
-    return { label: lbl, val, lv: getLevel(val), now: isNow };
-  });
 }
