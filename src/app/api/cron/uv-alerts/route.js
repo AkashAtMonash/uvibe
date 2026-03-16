@@ -4,11 +4,8 @@ import { prisma } from "@/lib/prisma";
 import { XMLParser } from "fast-xml-parser";
 import { buildNotificationPayload } from "@/app/api/push-send/route";
 
-webpush.setVapidDetails(
-  process.env.VAPID_SUBJECT,
-  process.env.VAPID_PUBLIC_KEY,
-  process.env.VAPID_PRIVATE_KEY,
-);
+export const dynamic = "force-dynamic";
+
 
 const ARPANSA_NAMES = {
   Melbourne: "Melbourne",
@@ -83,6 +80,11 @@ async function fetchWeather(city) {
 }
 
 export async function GET(request) {
+  webpush.setVapidDetails(
+    process.env.VAPID_SUBJECT || "mailto:admin@uvibe.app",
+    process.env.VAPID_PUBLIC_KEY || "",
+    process.env.VAPID_PRIVATE_KEY || "",
+  );
   const authHeader = request.headers.get("authorization");
   const cronSecret = process.env.CRON_SECRET;
   const isVercel = request.headers.get("x-vercel-signature") != null;

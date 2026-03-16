@@ -1,7 +1,16 @@
-import { PrismaClient } from "@prisma/client";
+import { PrismaClient } from "@/generated/prisma";
 
 const globalForPrisma = globalThis;
 
-export const prisma = globalForPrisma.prisma ?? new PrismaClient();
+function getPrisma() {
+  if (!globalForPrisma.prisma) {
+    globalForPrisma.prisma = new PrismaClient();
+  }
+  return globalForPrisma.prisma;
+}
 
-if (process.env.NODE_ENV !== "production") globalForPrisma.prisma = prisma;
+export const prisma = new Proxy({}, {
+  get(_, prop) {
+    return getPrisma()[prop];
+  }
+});

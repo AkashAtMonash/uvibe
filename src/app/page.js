@@ -12,7 +12,7 @@ import PreventionPage from "@/app/components/PreventionPage";
 import WelcomeModal from "@/app/components/WelcomeModal";
 import AwarenessPage from "@/app/components/AwarenessPage";
 
-import { nearestCity, getLevel, applyUVTheme } from "@/utils/uv";
+import { nearestCity, getLevel, applyUVTheme, CITIES } from "@/utils/uv";
 import { useUserSync } from "@/hooks/useUserSync";
 
 const DEFAULT_PREFS = {
@@ -35,7 +35,7 @@ export default function Page() {
   // All state starts with server-safe defaults — localStorage hydration happens in useEffect
   const [screen, setScreen] = useState("loading");
   const [page, setPage] = useState("home");
-  const [city, setCity] = useState("Melbourne");
+  const [city, setCity] = useState({ name: "Melbourne", lat: -37.81, lon: 144.96, state: "VIC", arpansa: "Melbourne" });
   const [showModal, setShowModal] = useState(false);
   const [geoGranted, setGeoGranted] = useState(false);
   const [theme, setTheme] = useState("black");
@@ -68,7 +68,13 @@ export default function Page() {
 
       if (loc) {
         const { city: c, granted } = JSON.parse(loc);
-        setCity(typeof c === "string" ? c : c?.name ?? "Melbourne");
+        // Restore as full object if available, else treat as string (backwards compat)
+        if (c && typeof c === "object" && c.lat) {
+          setCity(c);
+        } else {
+          const name = typeof c === "string" ? c : c?.name ?? "Melbourne";
+          setCity(CITIES[name] ? { ...CITIES[name], name } : { name, lat: -37.81, lon: 144.96, state: "VIC", arpansa: name });
+        }
         setGeoGranted(granted);
         setScreen("app");
       } else {
@@ -126,21 +132,25 @@ export default function Page() {
       async (pos) => {
         const lat = pos.coords.latitude;
         const lon = pos.coords.longitude;
-        const detected = nearestCity(lat, lon);
-        setCity(detected);
+        const detectedName = nearestCity(lat, lon);
+        const detectedCity = CITIES[detectedName]
+          ? { ...CITIES[detectedName], name: detectedName, lat, lon }
+          : { name: detectedName, lat, lon, state: "AU", arpansa: detectedName };
+        setCity(detectedCity);
         setGeoGranted(true);
         localStorage.setItem(
           "uvibe_location",
-          JSON.stringify({ city: detected, granted: true }),
+          JSON.stringify({ city: detectedCity, granted: true }),
         );
-        syncCity(detected);
+        syncCity(detectedName);
         setScreen("app");
       },
       () => {
-        setCity("Melbourne");
+        const melbCity = { name: "Melbourne", lat: -37.81, lon: 144.96, state: "VIC", arpansa: "Melbourne" };
+        setCity(melbCity);
         localStorage.setItem(
           "uvibe_location",
-          JSON.stringify({ city: "Melbourne", granted: false }),
+          JSON.stringify({ city: melbCity, granted: false }),
         );
         setScreen("app");
       },
@@ -149,10 +159,11 @@ export default function Page() {
 
   const handleDeny = useCallback(() => {
     setShowModal(false);
-    setCity("Melbourne");
+    const melbCity = { name: "Melbourne", lat: -37.81, lon: 144.96, state: "VIC", arpansa: "Melbourne" };
+    setCity(melbCity);
     localStorage.setItem(
       "uvibe_location",
-      JSON.stringify({ city: "Melbourne", granted: false }),
+      JSON.stringify({ city: melbCity, granted: false }),
     );
     syncCity("Melbourne");
     setScreen("app");
@@ -195,6 +206,8 @@ export default function Page() {
   }
 
   const ambientBg = `radial-gradient(ellipse 70% 40% at 50% 0%, ${lv.glow} 0%, transparent 60%)`;
+  // Derived city name string for components that render it as text
+  const cityName = typeof city === "string" ? city : city?.name || "Melbourne";
 
   return (
     <div className="flex h-[100dvh] w-full overflow-hidden relative">
@@ -206,7 +219,7 @@ export default function Page() {
       <Sidebar
         page={page}
         setPage={setPage}
-        city={city}
+        city={cityName}
         geoGranted={geoGranted}
         hasNotif={uv >= 8}
         theme={theme}
@@ -233,7 +246,7 @@ export default function Page() {
           )}
           {page === "awareness" && <AwarenessPage />}
           {page === "prevention" && (
-            <PreventionPage city={city} uv={uv} prefs={prefs} />
+            <PreventionPage city={cityName} uv={uv} prefs={prefs} />
           )}
           {page === "settings" && (
             <SettingsPage
