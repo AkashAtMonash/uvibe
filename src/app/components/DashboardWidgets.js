@@ -117,45 +117,48 @@ export function UVInfoDrawer({ uv = 0, onClose }) {
   );
 }
 
-// ─── User Profile Form ─────────────────────────────────────────────────────────
+// ─── User Profile Summary (Read-Only) ──────────────────────────────────────────
 
-export function UserProfileForm({ profile, onChange }) {
+export function UserProfileSummary({ profile }) {
+  const stats = [
+    { label: "Weight", value: `${profile.weightKg || 70}kg` },
+    { label: "Age",    value: `${profile.ageYears || 25}yrs` },
+    { label: "SPF",    value: profile.spf || 30 },
+  ];
+
   return (
-    <div className="card" style={{ padding: "18px 20px" }}>
-      <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 16 }}>
-        <div style={{ width: 30, height: 30, borderRadius: 10, background: "var(--uv-dim)", display: "flex", alignItems: "center", justifyContent: "center", color: "var(--uv-color)" }}>
-          <User size={15} />
+    <div className="card" style={{ padding: "20px 24px" }}>
+      <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 16 }}>
+        <div style={{ 
+          width: 40, height: 40, borderRadius: 12, 
+          background: "var(--uv-10, rgba(34,197,94,0.1))", 
+          display: "flex", alignItems: "center", justifyContent: "center",
+          color: "var(--uv, #22c55e)"
+        }}>
+          <User size={20} />
         </div>
         <div>
-          <div style={{ fontWeight: 800, fontSize: 13, color: "var(--text-1)" }}>{profile.name ? profile.name : "Your Profile"}</div>
-          <div style={{ fontSize: 10, color: "var(--text-3)", fontFamily: "var(--mono)" }}>Personalises sweat loss &amp; burn time</div>
+          <div style={{ fontSize: 13, fontWeight: 800, color: "var(--text-1)", letterSpacing: -0.3 }}>
+            {profile.name || "Your Profile"}
+          </div>
+          <div style={{ fontSize: 10, color: "var(--text-3)", fontFamily: "var(--mono)" }}>
+            Personalises sweat loss & burn time
+          </div>
         </div>
       </div>
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 10 }}>
-        {[
-          { key: "weightKg", label: "Weight", unit: "kg", min: 30, max: 200, step: 1 },
-          { key: "ageYears", label: "Age", unit: "yrs", min: 10, max: 90, step: 1 },
-          { key: "spf", label: "SPF", unit: "", min: 0, max: 100, step: 5 },
-        ].map(({ key, label, unit, min, max, step }) => (
-          <div key={key} style={{ display: "flex", flexDirection: "column", gap: 4 }}>
-            <label style={{ fontSize: 10, fontWeight: 700, color: "var(--text-3)", textTransform: "uppercase", letterSpacing: 1.2, fontFamily: "var(--mono)" }}>
-              {label}
-            </label>
-            <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-              <input
-                type="number"
-                value={profile[key] ?? ""}
-                min={min} max={max} step={step}
-                onChange={(e) => onChange(key, Number(e.target.value))}
-                style={{
-                  width: "100%", padding: "9px 10px", borderRadius: 10,
-                  border: "1.5px solid var(--surface-border)",
-                  background: "var(--bg-2)", color: "var(--text-1)",
-                  fontSize: 15, fontWeight: 700, outline: "none",
-                  fontFamily: "var(--mono)",
-                }}
-              />
-              {unit && <span style={{ fontSize: 11, color: "var(--text-3)", flexShrink: 0 }}>{unit}</span>}
+
+      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 12 }}>
+        {stats.map(s => (
+          <div key={s.label} style={{ 
+            display: "flex", flexDirection: "column", gap: 4, 
+            padding: "10px", borderRadius: 10, background: "var(--bg-2, #f9fafb)",
+            border: "1px solid var(--border-2, rgba(0,0,0,0.05))"
+          }}>
+            <div style={{ fontSize: 9, fontWeight: 800, color: "var(--text-3)", textTransform: "uppercase", letterSpacing: 1, fontFamily: "var(--mono)" }}>
+              {s.label}
+            </div>
+            <div style={{ fontSize: 14, fontWeight: 700, color: "var(--text-1)" }}>
+              {s.value}
             </div>
           </div>
         ))}
@@ -307,18 +310,23 @@ export function HourlyForecastChart({ forecast }) {
 
   const nowPt = pts[nowIdx] || pts[0];
 
-  // Which indices to label on x-axis: every 3 hours
+  // Which indices to label on x-axis: every 3 hours (3, 6, 9, 12)
   const labelIndices = new Set();
   forecast.forEach((f, i) => {
     const label = f.label || "";
-    // Label if hour is multiple of 3 (e.g. "3 AM", "6 AM", "9 PM" etc.) or if it's NOW
-    if (f.now) { labelIndices.add(i); return; }
-    const hourMatch = label.match(/(\d+)/);
+    const hourMatch = label.match(/^(\d+)/);
     if (hourMatch) {
       const h = parseInt(hourMatch[1], 10);
       if (h % 3 === 0) labelIndices.add(i);
     }
   });
+
+  // Always show NOW, and hide the immediate neighbors to avoid overlap
+  if (nowIdx !== -1) {
+    labelIndices.add(nowIdx);
+    labelIndices.delete(nowIdx - 1);
+    labelIndices.delete(nowIdx + 1);
+  }
 
   return (
     <div className="card" style={{ padding: "18px 20px", overflow: "visible", display: "flex", flexDirection: "column" }}>
@@ -380,10 +388,11 @@ export function HourlyForecastChart({ forecast }) {
               <g key={i} transform={`translate(${pt.x}, ${H + AXIS_H - 4})`}>
                 <text
                   textAnchor={anchor}
-                  fill={isNow ? "#F57C00" : "#9CA3AF"}
-                  fontSize={isNow ? 17 : 14}
-                  fontWeight={isNow ? 800 : 500}
+                  fill={isNow ? "var(--uv-color, #F57C00)" : "var(--text-3, #9CA3AF)"}
+                  fontSize={isNow ? 18 : 15}
+                  fontWeight={isNow ? 900 : 700}
                   fontFamily="system-ui, sans-serif"
+                  style={{ textShadow: "0 0 1px rgba(0,0,0,0.1)" }}
                 >
                   {isNow ? "NOW" : pt.label}
                 </text>

@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback, useRef } from "react";
 import { BentoGrid, MetricCard, UVGauge } from "./BentoCards";
-import { HourlyForecastChart, UnifiedSuggestionCard, UserProfileForm } from "./DashboardWidgets";
+import { HourlyForecastChart, UnifiedSuggestionCard, UserProfileSummary } from "./DashboardWidgets";
 import CitySearch from "./CitySearch";
 import { MapPin, Thermometer, Droplets, Clock, Sunrise } from "lucide-react";
 import WelcomeModal from "./WelcomeModal";
@@ -123,8 +123,11 @@ export default function HomePage({
 
   const fetchForecast = useCallback(async () => {
     try {
-      const cityName = typeof city === "string" ? city : city.name;
-      const res = await fetch(`/api/uvgraph?city=${encodeURIComponent(cityName)}`);
+      const c = typeof city === "string" ? CITIES[city] : city;
+      const cityName = c?.name || (typeof city === "string" ? city : "Melbourne");
+      let url = `/api/uvgraph?city=${encodeURIComponent(cityName)}`;
+      if (c?.lat && c?.lon) url += `&lat=${c.lat}&lon=${c.lon}`;
+      const res = await fetch(url);
       if (!res.ok) throw new Error();
       const data = await res.json();
       if (!data.hourly) throw new Error();
@@ -205,8 +208,8 @@ export default function HomePage({
           <CitySearch
             city={city}
             setCity={(c) => {
-              if (typeof c === "string") setCity(c);
-              else if (c?.name) setCity(c.name);
+              // Pass the full location object (with lat/lon) or string through to parent
+              setCity(c);
             }}
           />
         </div>
@@ -255,7 +258,7 @@ export default function HomePage({
                 <div style={{ padding: "14px 16px 10px", borderBottom: "1px solid var(--border)" }}>
                   <div style={{ fontSize: 13, fontWeight: 700, color: "var(--fg)", marginBottom: 2 }}>UV Notifications</div>
                   <div style={{ fontSize: 11, fontFamily: "var(--font-mono)", color: "var(--fg-3)" }}>
-                    {city} · UV {uv.toFixed(1)}
+                    {typeof city === "string" ? city : city?.name || "Melbourne"} · UV {uv.toFixed(1)}
                   </div>
                 </div>
 
@@ -319,7 +322,7 @@ export default function HomePage({
 
       {/* ── Date / state ── */}
       <div className="text-xs text-gray-400 font-medium mb-6 ml-1 tracking-wide flex justify-between">
-        <span>{dateStr} · {CITIES[city]?.state || "VIC"} · {timeStr}</span>
+        <span>{dateStr} · {typeof city === "string" ? (CITIES[city]?.state || "AU") : (city?.state || "AU")} · {timeStr}</span>
         {lastUpdated && (
           <span style={{ color: uvFailed ? "#ef4444" : "inherit" }}>
             UV updated {lastUpdated.toLocaleTimeString("en-AU", { hour: "2-digit", minute: "2-digit" })}
@@ -375,8 +378,8 @@ export default function HomePage({
           <MetricCard
             icon={<MapPin size={18} strokeWidth={2.5} />}
             label="Location"
-            value={CITIES[city]?.arpansa || city}
-            sub={CITIES[city]?.state || "VIC"}
+            value={typeof city === "string" ? (city) : (city?.name || "Melbourne")}
+            sub={typeof city === "string" ? (CITIES[city]?.state || "AU") : (city?.state || "AU")}
             accent={lv.color}
           />
           <MetricCard
@@ -412,7 +415,7 @@ export default function HomePage({
 
       <div className="w-full flex flex-col gap-6 mb-8">
         <UnifiedSuggestionCard uv={uv} burn={burn} envData={envData} />
-        <UserProfileForm profile={prefs} onChange={(k, v) => onSyncPrefs({ ...prefs, [k]: v })} />
+        <UserProfileSummary profile={prefs} />
         <HourlyForecastChart forecast={forecast} />
       </div>
 
