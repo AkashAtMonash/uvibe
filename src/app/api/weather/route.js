@@ -11,7 +11,7 @@ export async function GET(request) {
       { status: 400 },
     );
 
-  const key = process.env.OPENWEATHER_API_KEY;
+  const key = process.env.OPENWEATHER_API_KEY || "09928fa566e5a7a21cbbc8f04fe4a9b4";
   if (!key)
     return NextResponse.json(
       { error: "API key not configured" },

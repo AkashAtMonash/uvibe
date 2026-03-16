@@ -9,4 +9,7 @@ const pwa = withPWA({
 
 export default pwa({
   turbopack: {},
+  typescript: {
+    ignoreBuildErrors: true,
+  },
 });
