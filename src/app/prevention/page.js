@@ -10,6 +10,7 @@ import SunscreenTab from "@/app/components/prevention/SunscreenTab";
 import ReminderTab from "@/app/components/prevention/ReminderTab";
 import ClothingTab from "@/app/components/prevention/ClothingTab";
 import GuideTab from "@/app/components/prevention/GuideTab";
+import { Droplets, Clock, Shirt, FileText } from "lucide-react";
 
 export default function PreventionPage() {
   const [activeTab, setActiveTab] = useState("sunscreen");
@@ -49,6 +50,16 @@ export default function PreventionPage() {
     document.documentElement.style.setProperty("--uv-glow", lv.glow);
   }, [lv]);
 
+  const getTabIcon = (id) => {
+    switch (id) {
+      case "sunscreen": return <Droplets size={18} strokeWidth={2.5} />;
+      case "reminder": return <Clock size={18} strokeWidth={2.5} />;
+      case "clothing": return <Shirt size={18} strokeWidth={2.5} />;
+      case "guide": return <FileText size={18} strokeWidth={2.5} />;
+      default: return null;
+    }
+  };
+
   return (
     <div className="prev-page fade-in">
       <div className="prev-header">
@@ -84,7 +95,7 @@ export default function PreventionPage() {
               }
               onClick={() => setActiveTab(tab.id)}
             >
-              <span>{tab.icon}</span>
+              <span style={{ display: 'flex', marginBottom: 4 }}>{getTabIcon(tab.id)}</span>
               <span>{tab.label}</span>
             </button>
           ))}

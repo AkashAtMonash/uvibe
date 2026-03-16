@@ -5,57 +5,38 @@ import { FABRICS, getClothingTier } from "./constants";
 
 export default function ClothingTab({ lv, uv }) {
   const [activeFabric, setActiveFabric] = useState(null);
-  const tier = getClothingTier(uv);
+  const tier = getClothingTier(uv ?? 0);
+
+  const cardStyle = {
+    background: "var(--bg-2, #fff)",
+    border: "1px solid var(--border, rgba(0,0,0,0.08))",
+    borderRadius: 18,
+    padding: "16px 18px",
+    marginBottom: 14,
+  };
 
   return (
-    <div className="prev-tab-content">
-      <div className="prev-section">
-        <div className="prev-label">Recommendations for UV {uv.toFixed(1)}</div>
-        <div
-          style={{
-            padding: "18px",
-            borderRadius: "var(--r)",
-            border: `1px solid ${lv.color}40`,
-            background: lv.dim,
-          }}
-        >
-          <div
-            style={{
-              fontSize: 10,
-              fontFamily: "var(--font-mono)",
-              color: lv.color,
-              letterSpacing: 2,
-              textTransform: "uppercase",
-              marginBottom: 12,
-            }}
-          >
-            {tier.label}
-          </div>
-          <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-            {tier.items.map((item, i) => (
-              <div
-                key={i}
-                style={{
-                  display: "flex",
-                  alignItems: "flex-start",
-                  gap: 10,
-                  fontSize: 13,
-                  color: "var(--fg-1)",
-                  lineHeight: 1.5,
-                }}
-              >
-                <span style={{ color: lv.color, marginTop: 1, flexShrink: 0 }}>
-                  →
-                </span>
-                <span>{item}</span>
-              </div>
-            ))}
-          </div>
+    <div>
+      {/* UV Recommendations */}
+      <div style={{ ...cardStyle, borderColor: `${lv.color}40`, background: `${lv.color}08` }}>
+        <div style={{ fontSize: 10, fontFamily: "monospace", color: lv.color, letterSpacing: 2, textTransform: "uppercase", fontWeight: 700, marginBottom: 12 }}>
+          {tier.label}
+        </div>
+        <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+          {tier.items.map((item, i) => (
+            <div key={i} style={{ display: "flex", alignItems: "flex-start", gap: 10 }}>
+              <span style={{ color: lv.color, fontWeight: 800, fontSize: 14, flexShrink: 0, marginTop: 1 }}>→</span>
+              <span style={{ fontSize: 13, color: "var(--fg, #111)", lineHeight: 1.5 }}>{item}</span>
+            </div>
+          ))}
         </div>
       </div>
 
-      <div className="prev-section">
-        <div className="prev-label">Fabric UPF Guide</div>
+      {/* Fabric Guide */}
+      <div style={cardStyle}>
+        <div style={{ fontSize: 10, fontFamily: "monospace", color: "var(--fg-3, #9ca3af)", letterSpacing: 2, textTransform: "uppercase", fontWeight: 700, marginBottom: 12 }}>
+          Fabric UPF Guide
+        </div>
         <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
           {FABRICS.map((f) => {
             const on = activeFabric === f.name;
@@ -64,103 +45,53 @@ export default function ClothingTab({ lv, uv }) {
                 key={f.name}
                 onClick={() => setActiveFabric(on ? null : f.name)}
                 style={{
-                  display: "flex",
-                  alignItems: "center",
-                  gap: 10,
-                  padding: "13px 14px",
-                  borderRadius: "var(--r-sm)",
-                  border: `1px solid ${on ? `${f.color}50` : "var(--border)"}`,
-                  background: on ? `${f.color}0e` : "var(--bg-2)",
-                  cursor: "pointer",
-                  transition: "all 0.15s",
-                  width: "100%",
-                  textAlign: "left",
+                  display: "flex", alignItems: "center", gap: 10,
+                  padding: "13px 14px", borderRadius: 12,
+                  border: `1.5px solid ${on ? `${f.color}60` : "var(--border, rgba(0,0,0,0.08))"}`,
+                  background: on ? `${f.color}10` : "var(--bg-3, rgba(0,0,0,0.03))",
+                  cursor: "pointer", transition: "all 0.15s", width: "100%", textAlign: "left",
                 }}
               >
-                <div
-                  style={{
-                    fontSize: 14,
-                    fontWeight: 700,
-                    color: "var(--fg)",
-                    flex: 1,
-                  }}
-                >
-                  {f.name}
-                </div>
+                {/* UPF color dot */}
+                <div style={{ width: 10, height: 10, borderRadius: "50%", background: f.color, flexShrink: 0 }} />
+                <div style={{ fontSize: 13, fontWeight: 700, color: "var(--fg, #111)", flex: 1 }}>{f.name}</div>
+                {/* Tags */}
                 <div style={{ display: "flex", gap: 4, flexWrap: "wrap" }}>
                   {f.tags.map((t) => (
-                    <span
-                      key={t}
-                      style={{
-                        fontSize: 9,
-                        padding: "2px 6px",
-                        borderRadius: 4,
-                        background: "var(--surface-2)",
-                        color: "var(--fg-3)",
-                        fontFamily: "var(--font-mono)",
-                      }}
-                    >
+                    <span key={t} style={{ fontSize: 9, padding: "2px 6px", borderRadius: 4, background: "var(--bg-4, rgba(0,0,0,0.05))", color: "var(--fg-3, #9ca3af)", fontFamily: "monospace" }}>
                       {t}
                     </span>
                   ))}
                 </div>
-                <div
-                  style={{
-                    fontSize: 12,
-                    fontWeight: 800,
-                    fontFamily: "var(--font-mono)",
-                    color: f.color,
-                    minWidth: 50,
-                    textAlign: "right",
-                  }}
-                >
+                {/* UPF */}
+                <div style={{ fontSize: 12, fontWeight: 800, fontFamily: "monospace", color: f.color, minWidth: 50, textAlign: "right" }}>
                   UPF {f.upf}
                 </div>
-                <div
-                  style={{
-                    fontSize: 11,
-                    color: "var(--fg-3)",
-                    minWidth: 52,
-                    textAlign: "right",
-                    letterSpacing: 1,
-                  }}
-                >
-                  {"●".repeat(f.breathability)}
-                  {"○".repeat(5 - f.breathability)}
+                {/* Breathability */}
+                <div style={{ fontSize: 11, color: "var(--fg-3, #9ca3af)", minWidth: 50, textAlign: "right" }}>
+                  {"●".repeat(f.breathability)}{"○".repeat(5 - f.breathability)}
                 </div>
               </button>
             );
           })}
         </div>
-        <div
-          style={{
-            fontSize: 9,
-            fontFamily: "var(--font-mono)",
-            color: "var(--fg-3)",
-            marginTop: 6,
-          }}
-        >
+        <div style={{ fontSize: 10, fontFamily: "monospace", color: "var(--fg-3, #9ca3af)", marginTop: 8 }}>
           ● = Breathability (5 = most breathable)
         </div>
       </div>
 
-      <div className="prev-info-card">
-        <div className="prev-info-title">👕 What is UPF?</div>
-        <div className="prev-info-body">
-          UPF (Ultraviolet Protection Factor) measures how much UV passes
-          through fabric. UPF 50+ blocks over 98% of UV — equivalent to SPF 50
-          sunscreen. Wet fabric loses 50–70% of its UPF rating.
+      {/* Info cards */}
+      {[
+        { icon: "👕", title: "What is UPF?", body: "UPF (Ultraviolet Protection Factor) measures how much UV passes through fabric. UPF 50+ blocks over 98% of UV — equivalent to SPF 50 sunscreen. Wet fabric loses 50–70% of its UPF rating." },
+        { icon: "🧢", title: "Hat Requirements by UV", body: "UV 3–5: Wide-brim hat (brim ≥7.5cm). UV 6+: Broad-brim or legionnaire hat with neck flap. Caps and visors leave ears and neck exposed — the most commonly burned areas in outdoor workers." },
+      ].map(({ icon, title, body }) => (
+        <div key={title} style={{ ...cardStyle, background: "var(--bg-3, rgba(0,0,0,0.02))" }}>
+          <div style={{ fontSize: 13, fontWeight: 800, color: "var(--fg, #111)", marginBottom: 6 }}>
+            {icon} {title}
+          </div>
+          <div style={{ fontSize: 12, color: "var(--fg-2, #555)", lineHeight: 1.7 }}>{body}</div>
         </div>
-      </div>
-
-      <div className="prev-info-card">
-        <div className="prev-info-title">🧢 Hat Requirements by UV</div>
-        <div className="prev-info-body">
-          UV 3–5: Wide-brim hat (brim ≥7.5cm). UV 6+: Broad-brim or legionnaire
-          hat with neck flap. Caps and visors leave ears and neck exposed — the
-          most commonly burned areas in outdoor workers.
-        </div>
-      </div>
+      ))}
     </div>
   );
 }
