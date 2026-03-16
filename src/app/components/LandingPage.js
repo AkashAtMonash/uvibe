@@ -1,7 +1,6 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import UVRing from "./UVRing";
 import { getLevel, simulateUV } from "@/utils/uv";
 
 const FEATURES = [

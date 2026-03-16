@@ -1,3 +1,14 @@
+// src/app/components/prevention/constants.js
+
+import { Droplets, Clock, Shirt, FileText, Sun, CloudSun, AlertTriangle, Moon, Umbrella, Activity, Car, HardHat, ShieldCheck, TreePine, Glasses } from "lucide-react";
+
+export const TABS = [
+  { id: "sunscreen", iconStr: Droplets, label: "Sunscreen", sub: "Dosage & SPF" },
+  { id: "reminder", iconStr: Clock, label: "Reminders", sub: "Reapplication" },
+  { id: "clothing", iconStr: Shirt, label: "Clothing", sub: "UPF & Fabric" },
+  { id: "guide", iconStr: FileText, label: "Guide", sub: "5 S's & Tips" },
+];
+
 export const BODY_PARTS = [
   { id: "face", label: "Face & Neck", tsp: 0.5 },
   { id: "arms", label: "Arms", tsp: 0.5 },
@@ -112,35 +123,35 @@ export const CLOTHING_BY_UV = {
 export const FIVE_S = [
   {
     s: "Slip",
-    icon: "👕",
+    iconStr: Shirt,
     color: "#22d3aa",
     title: "Slip on clothing",
     body: "Cover as much skin as possible. Choose loose-fitting, tightly-woven fabric. Dark or bright colours absorb more UV. Look for UPF-rated garments.",
   },
   {
     s: "Slop",
-    icon: "🧴",
-    color: "#f59e0b",
+    iconStr: Droplets,
+    color: "#fbbf24",
     title: "Slop on SPF 50+",
     body: "Apply SPF 50+ broad-spectrum, water-resistant sunscreen 20 min before going outside. Use a teaspoon per body part. Reapply every 2 hours.",
   },
   {
     s: "Slap",
-    icon: "🧢",
+    iconStr: ShieldCheck,
     color: "#f97316",
     title: "Slap on a hat",
     body: "A broad-brim hat (brim ≥7.5cm) protects face, ears and neck. Caps leave ears and neck exposed. Legionnaire hats with neck flaps are best outdoors.",
   },
   {
     s: "Seek",
-    icon: "🌳",
+    iconStr: TreePine,
     color: "#22d3aa",
     title: "Seek shade",
     body: "Up to 80% of UV penetrates light cloud. Seek shade particularly between 10am and 3pm when UV is at its most intense.",
   },
   {
     s: "Slide",
-    icon: "🕶️",
+    iconStr: Glasses,
     color: "#a78bfa",
     title: "Slide on sunglasses",
     body: "UV causes cataracts and eye damage. Choose close-fitting, wrap-around sunglasses that meet AS/NZS 1067. Look for UV400 rating.",
@@ -149,7 +160,7 @@ export const FIVE_S = [
 
 export const ACTIVITY_TIPS = [
   {
-    icon: "🏖️",
+    iconStr: Umbrella,
     activity: "Beach & Swimming",
     tips: [
       "Water reflects up to 25% extra UV",
@@ -160,7 +171,7 @@ export const ACTIVITY_TIPS = [
     ],
   },
   {
-    icon: "🏃",
+    iconStr: Activity,
     activity: "Sport & Exercise",
     tips: [
       "Sweat degrades sunscreen — reapply every 60–90 min",
@@ -170,7 +181,7 @@ export const ACTIVITY_TIPS = [
     ],
   },
   {
-    icon: "🚗",
+    iconStr: Car,
     activity: "Daily Commute",
     tips: [
       "Car windows block UVB but not UVA — face and arms still at risk",
@@ -179,7 +190,7 @@ export const ACTIVITY_TIPS = [
     ],
   },
   {
-    icon: "👷",
+    iconStr: HardHat,
     activity: "Outdoor Work",
     tips: [
       "Outdoor workers get 5–10× more UV than indoor workers",
@@ -216,35 +227,35 @@ export const SKIN_CANCER_SIGNS = [
 export const BEST_TIMES = [
   {
     time: "Before 10am",
-    icon: "🌅",
+    iconStr: CloudSun,
     uv: "Low–Moderate",
     safe: true,
     desc: "Safest time for outdoor activity. UV typically below 3 in most Australian cities.",
   },
   {
     time: "10am – 12pm",
-    icon: "⚠️",
+    iconStr: AlertTriangle,
     uv: "High",
     safe: false,
     desc: "UV rising rapidly. Full sun protection required. Limit exposure time.",
   },
   {
     time: "12pm – 2pm",
-    icon: "🔴",
+    iconStr: Sun,
     uv: "Peak",
     safe: false,
     desc: "Highest UV of the day. Seek shade. Avoid prolonged outdoor activity.",
   },
   {
     time: "2pm – 4pm",
-    icon: "⚠️",
+    iconStr: AlertTriangle,
     uv: "High",
     safe: false,
     desc: "UV still dangerously high. Do not drop sun protection.",
   },
   {
     time: "After 4pm",
-    icon: "🌇",
+    iconStr: Moon,
     uv: "Moderate–Low",
     safe: true,
     desc: "UV decreasing. SPF still recommended until UV index drops below 3.",
@@ -280,5 +291,3 @@ export const PREV_TABS = [
   { id: "guide", icon: "📋", label: "Guide" },
 ];
 
-// Alias for backwards compatibility
-export const TABS = PREV_TABS;

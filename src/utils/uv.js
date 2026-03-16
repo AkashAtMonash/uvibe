@@ -67,19 +67,13 @@ export const UV_LEVELS = [
   },
 ];
 
-// Burn time constants (minutes to burn at UVI 1, unprotected skin)
-// Australian-calibrated values using WHO/ARPANSA Fitzpatrick scale formula: burnMin = TS / UVI
-// Adjusted with 0.44 Australian factor to reflect thinner Southern Hemisphere ozone layer
-// Research basis: "sunburn in as little as 8 min" at extreme UV in Australia (PMC11688272)
-// At UVI 11: Type I = 3 min, Type II = 4 min, Type III = 8 min — matches ARPANSA standard
-// Reference: WHO Global Solar UV Index guide (2002), ARPANSA UV dose guidance
 const FITZPATRICK = [
-  { type: "I", label: "Type I", ts: 29 }, // Always burns, never tans — 3 min at UVI 11
-  { type: "II", label: "Type II", ts: 44 }, // Usually burns, rarely tans — 4 min at UVI 11
-  { type: "III", label: "Type III", ts: 88 }, // Sometimes burns, always tans — 8 min at UVI 11
-  { type: "IV", label: "Type IV", ts: 132 }, // Rarely burns, always tans — 12 min at UVI 11
-  { type: "V", label: "Type V", ts: 176 }, // Very rarely burns — 16 min at UVI 11
-  { type: "VI", label: "Type VI", ts: 220 }, // Never burns — 20 min at UVI 11
+  { type: "I", label: "Type I", ts: 29 },
+  { type: "II", label: "Type II", ts: 44 },
+  { type: "III", label: "Type III", ts: 88 },
+  { type: "IV", label: "Type IV", ts: 132 },
+  { type: "V", label: "Type V", ts: 176 },
+  { type: "VI", label: "Type VI", ts: 220 },
 ];
 
 const BASE_UV = {
@@ -102,12 +96,15 @@ export function getLevel(uv) {
   return UV_LEVELS.find((l) => uv >= l.min && uv <= l.max) || UV_LEVELS[0];
 }
 
-// Calculates time to skin damage based on WHO/ARPANSA burn time formula
-// bare:  TS / UVI  (unprotected skin, Australian-calibrated)
-// prot:  bare × SPF × 0.4 (real-world SPF factor — people apply ~40% of test dose)
-//        Cancer Council AU notes most people under-apply sunscreen, reducing effective SPF
-// Reference: Cancer Council Australia sunscreen application guide
-// No floor applied — medically accurate values are preserved
+export function applyUVTheme(level) {
+  if (typeof document === "undefined" || !level) return;
+
+  const root = document.documentElement;
+  root.style.setProperty("--uv-color", level.color || UV_LEVELS[0].color);
+  root.style.setProperty("--uv-dim", level.dim || UV_LEVELS[0].dim);
+  root.style.setProperty("--uv-glow", level.glow || UV_LEVELS[0].glow);
+}
+
 export function calcBurn(uv, skinType = "III", spf = 50) {
   if (!uv || uv <= 0) return null;
   const f = FITZPATRICK.find((f) => f.type === skinType);
@@ -117,11 +114,6 @@ export function calcBurn(uv, skinType = "III", spf = 50) {
   return { bare: Math.max(1, bare), prot: Math.max(1, prot) };
 }
 
-// Human-language alerts aligned with Cancer Council Australia and ARPANSA guidance
-// Sources:
-//   ARPANSA UV index guide: https://www.arpansa.gov.au/user-guide-uv-index-meter
-//   Cancer Council Australia: https://www.cancer.org.au/cancer-information/causes-and-prevention/sun-safety
-//   Research: "sunburn can develop in as little as 8 min" in Australian summer (PMC11688272)
 export function humanAlert(uv, burn, city) {
   if (!burn || uv <= 0) {
     return `UV data loaded for ${city}. Check back during daylight hours.`;
@@ -141,8 +133,6 @@ export function humanAlert(uv, burn, city) {
   return `Extreme UV ${uv} in ${city}. Permanent skin damage in as little as ${burn.bare} min. Stay indoors or in full shade. SPF 50+ mandatory.`;
 }
 
-// Reapplication intervals based on Cancer Council Australia guidelines
-// Source: https://www.cancer.org.au/cancer-information/causes-and-prevention/sun-safety/sunscreen
 export function getDynamicInterval(uv) {
   if (uv >= 11)
     return {
@@ -171,16 +161,24 @@ export function getDynamicInterval(uv) {
 }
 
 export function nearestCity(lat, lon) {
-  let best = "Melbourne",
-    bestD = Infinity;
-  Object.entries(CITIES).forEach(([name, c]) => {
-    const d = Math.sqrt((lat - c.lat) ** 2 + (lon - c.lon) ** 2);
-    if (d < bestD) {
-      bestD = d;
-      best = name;
+  if (!Number.isFinite(lat) || !Number.isFinite(lon)) return "Melbourne";
+
+  let bestCity = "Melbourne";
+  let bestDist = Infinity;
+
+  for (const [name, coords] of Object.entries(CITIES)) {
+    if (!coords) continue;
+    const dLat = lat - coords.lat;
+    const dLon = lon - coords.lon;
+    const dist = dLat * dLat + dLon * dLon;
+
+    if (dist < bestDist) {
+      bestDist = dist;
+      bestCity = name;
     }
-  });
-  return best;
+  }
+
+  return bestCity;
 }
 
 export function simulateUV(city) {
@@ -193,11 +191,4 @@ export function simulateUV(city) {
       ((BASE_UV[city] ?? 8) * mod + (Math.random() - 0.5) * 0.4).toFixed(1),
     ),
   );
-}
-
-export function applyUVTheme(lv) {
-  const r = document.documentElement;
-  r.style.setProperty("--uv", lv.color);
-  r.style.setProperty("--uv-10", lv.dim);
-  r.style.setProperty("--uv-20", lv.glow);
 }

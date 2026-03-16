@@ -1,6 +1,8 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 
+export const dynamic = "force-dynamic";
+
 async function getOrCreateLocation(cityName) {
   const CITY_DATA = {
     Melbourne: { latitude: -37.81, longitude: 144.96, state: "VIC" },

@@ -8,10 +8,14 @@ const SW_REG_KEY = "uvibe_sw_registered";
 
 function urlBase64ToUint8Array(base64String) {
   if (!base64String) throw new Error("NEXT_PUBLIC_VAPID_PUBLIC_KEY is not set");
-  const padding = "=".repeat((4 - (base64String.length % 4)) % 4);
-  const base64 = (base64String + padding).replace(/-/g, "+").replace(/_/g, "/");
-  const raw = atob(base64);
-  return new Uint8Array([...raw].map((c) => c.charCodeAt(0)));
+  try {
+    const padding = "=".repeat((4 - (base64String.length % 4)) % 4);
+    const base64 = (base64String + padding).replace(/-/g, "+").replace(/_/g, "/");
+    const raw = atob(base64);
+    return new Uint8Array([...raw].map((c) => c.charCodeAt(0)));
+  } catch (err) {
+    throw new Error("Malformed VAPID Configuration. Check your .env key.");
+  }
 }
 
 async function registerSWAndSubscribe(vapidKey) {
@@ -24,7 +28,7 @@ async function registerSWAndSubscribe(vapidKey) {
       "VAPID key missing — add NEXT_PUBLIC_VAPID_PUBLIC_KEY to Vercel env vars",
     );
 
-  const reg = await navigator.serviceWorker.register("/sw.js");
+  const reg = await navigator.serviceWorker.register("/uvibe-sw.js");
   await navigator.serviceWorker.ready;
 
   // Check for existing subscription first
@@ -65,7 +69,7 @@ export function useUserSync() {
 
     try {
       // 1. Upsert user in DB
-      await fetch("/api/user", {
+      const userRes = await fetch("/api/user", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -75,6 +79,10 @@ export function useUserSync() {
           notifEnabled: true,
         }),
       });
+      if (!userRes.ok) {
+        const errorData = await userRes.json();
+        throw new Error(errorData.error || "Failed to save user in database");
+      }
 
       // 2. Register SW and get push subscription
       const vapidKey = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY;

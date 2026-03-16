@@ -2,11 +2,7 @@ import { NextResponse } from "next/server";
 import webpush from "web-push";
 import { prisma } from "@/lib/prisma";
 
-webpush.setVapidDetails(
-  process.env.VAPID_SUBJECT,
-  process.env.VAPID_PUBLIC_KEY,
-  process.env.VAPID_PRIVATE_KEY,
-);
+export const dynamic = "force-dynamic";
 
 const CITIES = {
   Melbourne: { lat: -37.81, lon: 144.96 },
@@ -104,6 +100,11 @@ export function buildNotificationPayload(cityName, uv, weather) {
 }
 
 export async function POST(request) {
+  webpush.setVapidDetails(
+    process.env.VAPID_SUBJECT || "mailto:admin@uvibe.app",
+    process.env.VAPID_PUBLIC_KEY || "",
+    process.env.VAPID_PRIVATE_KEY || "",
+  );
   try {
     const {
       pushToken,

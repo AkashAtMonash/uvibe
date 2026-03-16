@@ -4,67 +4,23 @@
 import { useState, useEffect, useRef } from "react";
 
 const SKIN_TYPES = [
-  {
-    type: "I",
-    label: "Type I",
-    desc: "Always burns, never tans",
-    swatch: "#fde8d8",
-  },
-  {
-    type: "II",
-    label: "Type II",
-    desc: "Usually burns, sometimes tans",
-    swatch: "#f5cba7",
-  },
-  {
-    type: "III",
-    label: "Type III",
-    desc: "Sometimes burns, always tans",
-    swatch: "#e59866",
-  },
-  {
-    type: "IV",
-    label: "Type IV",
-    desc: "Rarely burns, always tans",
-    swatch: "#ca8b4a",
-  },
-  {
-    type: "V",
-    label: "Type V",
-    desc: "Very rarely burns, tans darkly",
-    swatch: "#7d5a3c",
-  },
-  {
-    type: "VI",
-    label: "Type VI",
-    desc: "Never burns, deeply pigmented",
-    swatch: "#3d1c02",
-  },
+  { type: "I",   label: "Type I",   desc: "Always burns, never tans",          swatch: "#fde8d8" },
+  { type: "II",  label: "Type II",  desc: "Usually burns, sometimes tans",      swatch: "#f5cba7" },
+  { type: "III", label: "Type III", desc: "Sometimes burns, always tans",       swatch: "#e59866" },
+  { type: "IV",  label: "Type IV",  desc: "Rarely burns, always tans",          swatch: "#ca8b4a" },
+  { type: "V",   label: "Type V",   desc: "Very rarely burns, tans darkly",     swatch: "#7d5a3c" },
+  { type: "VI",  label: "Type VI",  desc: "Never burns, deeply pigmented",      swatch: "#3d1c02" },
 ];
 
 const SPF_OPTIONS = [
-  { val: 15, label: "SPF 15", note: "Minimum" },
-  { val: 30, label: "SPF 30", note: "Standard" },
+  { val: 15, label: "SPF 15",  note: "Minimum"     },
+  { val: 30, label: "SPF 30",  note: "Standard"    },
   { val: 50, label: "SPF 50+", note: "Recommended" },
-];
-
-const AGE_RANGES = [
-  "Under 18",
-  "18–24",
-  "25–34",
-  "35–44",
-  "45–54",
-  "55–64",
-  "65+",
 ];
 
 function Toggle({ id, checked, onChange }) {
   return (
-    <label
-      className="settings-toggle"
-      htmlFor={id}
-      style={{ cursor: "pointer" }}
-    >
+    <label className="settings-toggle" htmlFor={id} style={{ cursor: "pointer" }}>
       <input
         id={id}
         type="checkbox"
@@ -90,22 +46,58 @@ function Toggle({ id, checked, onChange }) {
 function Section({ title, children }) {
   return (
     <div className="settings-section">
-      <div className="divider-label label-sm" style={{ marginBottom: 10 }}>
+      <div className="divider-label label-sm" style={{ marginBottom: 10, color: "var(--fg-3)", fontSize: 10, letterSpacing: 2, textTransform: "uppercase", fontFamily: "var(--font-mono)" }}>
         {title}
       </div>
-      <div className="settings-group">{children}</div>
+      <div className="settings-group" style={{ background: "var(--surface, #1a1a2e)", borderRadius: "var(--r, 16px)", border: "1px solid var(--border, rgba(255,255,255,0.08))", overflow: "hidden" }}>
+        {children}
+      </div>
     </div>
   );
 }
 
 function Row({ label, desc, right }) {
   return (
-    <div className="settings-row">
-      <div className="settings-row-left">
-        <div className="settings-row-label">{label}</div>
-        {desc && <div className="settings-row-desc">{desc}</div>}
+    <div className="settings-row" style={{ display: "flex", alignItems: "center", padding: "14px 18px", borderBottom: "1px solid var(--border, rgba(255,255,255,0.06))", justifyContent: "space-between", gap: 12 }}>
+      <div style={{ flex: 1 }}>
+        <div style={{ fontSize: 14, fontWeight: 600, color: "var(--fg, #f0f0f0)" }}>{label}</div>
+        {desc && <div style={{ fontSize: 11, color: "var(--fg-3, #888)", marginTop: 2 }}>{desc}</div>}
       </div>
       {right}
+    </div>
+  );
+}
+
+// Compact number stepper input
+function NumberInput({ label, value, onChange, min, max, step = 1, unit }) {
+  return (
+    <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+      <label style={{ fontSize: 11, fontWeight: 700, color: "var(--fg-3, #888)", textTransform: "uppercase", letterSpacing: 1 }}>
+        {label}
+      </label>
+      <div style={{ display: "flex", alignItems: "center", gap: 6, background: "var(--bg-3, #111)", borderRadius: 10, border: "1px solid var(--border-2, rgba(255,255,255,0.12))", padding: "0 10px 0 0", overflow: "hidden" }}>
+        <input
+          type="number"
+          value={value}
+          min={min}
+          max={max}
+          step={step}
+          onChange={(e) => onChange(Number(e.target.value))}
+          style={{
+            flex: 1,
+            padding: "10px 10px",
+            background: "transparent",
+            border: "none",
+            color: "var(--fg, #f0f0f0)",
+            fontSize: 15,
+            fontWeight: 700,
+            outline: "none",
+            fontFamily: "var(--font-mono, monospace)",
+            minWidth: 0,
+          }}
+        />
+        {unit && <span style={{ fontSize: 11, color: "var(--fg-3, #888)", flexShrink: 0 }}>{unit}</span>}
+      </div>
     </div>
   );
 }
@@ -122,39 +114,45 @@ export default function SettingsPage({
   onTestNotif,
 }) {
   const [testResult, setTestResult] = useState(null);
-  const [name, setName] = useState("");
-  const [ageRange, setAgeRange] = useState("");
-  const [skinType, setSkinType] = useState("III");
-  const [spf, setSpf] = useState(50);
-  const [notif, setNotif] = useState(false);
-  const [reapply, setReapply] = useState(false);
-  const [threshold, setThreshold] = useState(6);
-  const [saved, setSaved] = useState(false);
+  const [name, setName]             = useState("");
+  const [weight, setWeight]         = useState(70);
+  const [age, setAge]               = useState(25);
+  const [skinType, setSkinType]     = useState("III");
+  const [spf, setSpf]               = useState(30);
+  const [notif, setNotif]           = useState(false);
+  const [reapply, setReapply]       = useState(false);
+  const [threshold, setThreshold]   = useState(6);
+  const [saved, setSaved]           = useState(false);
+  const [notifError, setNotifError] = useState(null);
   const initialisedRef = useRef(false);
 
   useEffect(() => {
     if (initialisedRef.current) return;
     initialisedRef.current = true;
     setName(prefs.name ?? "");
-    setAgeRange(prefs.ageRange ?? "");
+    setWeight(prefs.weightKg ?? 70);
+    setAge(prefs.ageYears ?? 25);
     setSkinType(prefs.skinType ?? "III");
-    setSpf(prefs.spf ?? 50);
+    setSpf(prefs.spf ?? 30);
     setNotif(prefs.notifEnabled ?? false);
     setReapply(prefs.reapplyReminder ?? false);
     setThreshold(prefs.alertThreshold ?? 6);
   }, [prefs]);
 
+  const buildUpdated = () => ({
+    ...prefs,
+    name,
+    weightKg: weight,
+    ageYears: age,
+    skinType,
+    spf,
+    notifEnabled: notif,
+    reapplyReminder: reapply,
+    alertThreshold: threshold,
+  });
+
   const handleSave = async () => {
-    const updated = {
-      ...prefs,
-      name,
-      ageRange,
-      skinType,
-      spf,
-      notifEnabled: notif,
-      reapplyReminder: reapply,
-      alertThreshold: threshold,
-    };
+    const updated = buildUpdated();
     setPrefs(updated);
     onSyncPrefs?.(updated);
     setSaved(true);
@@ -162,29 +160,17 @@ export default function SettingsPage({
   };
 
   const autoSave = (patch) => {
-    const updated = {
-      ...prefs,
-      name,
-      ageRange,
-      skinType,
-      spf,
-      notifEnabled: notif,
-      reapplyReminder: reapply,
-      alertThreshold: threshold,
-      ...patch,
-    };
+    const updated = { ...buildUpdated(), ...patch };
     setPrefs(updated);
     onSyncPrefs?.(updated);
   };
-
-  const [notifError, setNotifError] = useState(null);
 
   const handleNotifToggle = async (val) => {
     setNotif(val);
     autoSave({ notifEnabled: val });
     if (val) {
       setNotifError(null);
-      const result = await onRequestNotif?.({ ...prefs, notifEnabled: true });
+      const result = await onRequestNotif?.({ ...buildUpdated(), notifEnabled: true });
       if (result?.error) {
         setNotifError(result.error);
         setNotif(false);
@@ -193,144 +179,95 @@ export default function SettingsPage({
     }
   };
 
-  const handleReapplyToggle = (val) => {
-    setReapply(val);
-    autoSave({ reapplyReminder: val });
-  };
-
-  const handleThresholdChange = (val) => {
-    setThreshold(val);
-    autoSave({ alertThreshold: val });
+  const inputStyle = {
+    width: "100%",
+    background: "var(--bg-3, #111)",
+    border: "1px solid var(--border-2, rgba(255,255,255,0.12))",
+    borderRadius: 10,
+    padding: "10px 14px",
+    fontSize: 14,
+    color: "var(--fg, #f0f0f0)",
+    fontFamily: "var(--font-display)",
+    outline: "none",
   };
 
   return (
-    <div className="page anim-fade-in">
+    <div className="page anim-fade-in" style={{ maxWidth: 640, margin: "0 auto", padding: "24px 16px 100px" }}>
+      {/* Header */}
       <div className="anim-fade-up" style={{ marginBottom: 28 }}>
-        <div
-          style={{
-            fontSize: 26,
-            fontWeight: 800,
-            letterSpacing: -0.8,
-            marginBottom: 4,
-          }}
-        >
+        <div style={{ fontSize: 26, fontWeight: 800, letterSpacing: -0.8, marginBottom: 4, color: "var(--fg, #f0f0f0)" }}>
           Settings
         </div>
-        <div
-          style={{
-            fontSize: 11,
-            fontFamily: "var(--font-mono)",
-            color: "var(--fg-3)",
-          }}
-        >
+        <div style={{ fontSize: 11, fontFamily: "var(--font-mono)", color: "var(--fg-3, #888)" }}>
           Personalise your UVibe experience
         </div>
       </div>
 
+      {/* PROFILE section */}
       <Section title="Profile">
-        <div
-          style={{
-            padding: "16px 20px",
-            display: "flex",
-            flexDirection: "column",
-            gap: 14,
-          }}
-        >
+        <div style={{ padding: "16px 18px", display: "flex", flexDirection: "column", gap: 16 }}>
+
+          {/* Display Name */}
           <div>
-            <div className="settings-row-label" style={{ marginBottom: 8 }}>
+            <label style={{ fontSize: 13, fontWeight: 700, color: "var(--fg, #f0f0f0)", display: "block", marginBottom: 8 }}>
               Display Name
-            </div>
+            </label>
             <input
               type="text"
               value={name}
               onChange={(e) => setName(e.target.value)}
               placeholder="Your name (optional)"
-              style={{
-                width: "100%",
-                background: "var(--bg-3)",
-                border: "1px solid var(--border-2)",
-                borderRadius: "var(--r-sm)",
-                padding: "10px 14px",
-                fontSize: 14,
-                color: "var(--fg)",
-                fontFamily: "var(--font-display)",
-                outline: "none",
-              }}
+              style={inputStyle}
             />
           </div>
-          <div>
-            <div className="settings-row-label" style={{ marginBottom: 8 }}>
-              Age Range
-            </div>
-            <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
-              {AGE_RANGES.map((r) => (
-                <button
-                  key={r}
-                  onClick={() => setAgeRange(r)}
-                  style={{
-                    padding: "7px 14px",
-                    borderRadius: 20,
-                    fontSize: 12,
-                    fontWeight: 600,
-                    fontFamily: "var(--font-display)",
-                    border: `1px solid ${ageRange === r ? "var(--uv)" : "var(--border)"}`,
-                    background: ageRange === r ? "var(--uv-10)" : "transparent",
-                    color: ageRange === r ? "var(--uv)" : "var(--fg-2)",
-                    cursor: "pointer",
-                    transition: "all 0.15s",
-                  }}
-                >
-                  {r}
-                </button>
-              ))}
-            </div>
+
+          {/* Age + Weight — numeric inputs in a grid */}
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+            <NumberInput
+              label="Age"
+              value={age}
+              onChange={setAge}
+              min={1} max={120} step={1}
+              unit="yrs"
+            />
+            <NumberInput
+              label="Weight"
+              value={weight}
+              onChange={setWeight}
+              min={20} max={250} step={1}
+              unit="kg"
+            />
           </div>
+
         </div>
       </Section>
 
+      {/* APPEARANCE */}
       <Section title="Appearance">
-        <div style={{ padding: "16px 20px 8px" }}>
-          <div
-            style={{
-              fontSize: 13,
-              fontWeight: 700,
-              color: "var(--fg)",
-              marginBottom: 12,
-            }}
-          >
-            Theme
-          </div>
-          <div className="theme-options">
+        <div style={{ padding: "16px 18px 8px" }}>
+          <div style={{ fontSize: 13, fontWeight: 700, color: "var(--fg, #f0f0f0)", marginBottom: 12 }}>Theme</div>
+          <div style={{ display: "flex", gap: 12 }}>
             {[
-              {
-                id: "black",
-                label: "Black",
-                dark: "#0a0a0a",
-                light: "#1a1a1a",
-              },
-              {
-                id: "white",
-                label: "White",
-                dark: "#f0ede8",
-                light: "#e8e4dd",
-              },
+              { id: "dark",  label: "Moon 🌙", desc: "Dark Mode",  bg: "#0a0a0a" },
+              { id: "light", label: "Sun ☀️",  desc: "Light Mode", bg: "#f9fafb" },
             ].map((t) => (
               <button
                 key={t.id}
-                className={`theme-option ${theme === t.id ? "active" : ""}`}
                 onClick={() => setTheme(t.id)}
+                style={{
+                  flex: 1,
+                  padding: "14px 12px",
+                  borderRadius: 14,
+                  border: `2px solid ${theme === t.id ? "var(--uv, #22c55e)" : "var(--border, rgba(255,255,255,0.1))"}`,
+                  background: theme === t.id ? "var(--uv-10, rgba(34,197,94,0.1))" : "var(--surface, #1a1a2e)",
+                  cursor: "pointer",
+                  transition: "all 0.15s",
+                  textAlign: "center",
+                }}
               >
-                <div className="theme-preview">
-                  <div
-                    className="theme-preview-half"
-                    style={{ background: t.dark }}
-                  />
-                  <div
-                    className="theme-preview-half"
-                    style={{ background: t.light }}
-                  />
-                </div>
-                <div className="theme-preview-label">{t.label}</div>
+                <div style={{ fontSize: 22, marginBottom: 4 }}>{t.id === "dark" ? "🌙" : "☀️"}</div>
+                <div style={{ fontSize: 13, fontWeight: 700, color: theme === t.id ? "var(--uv, #22c55e)" : "var(--fg, #f0f0f0)" }}>{t.label}</div>
+                <div style={{ fontSize: 10, color: "var(--fg-3, #888)", marginTop: 2 }}>{t.desc}</div>
               </button>
             ))}
           </div>
@@ -339,25 +276,15 @@ export default function SettingsPage({
           label="High Contrast"
           desc="Enhanced borders and text for outdoor use"
           right={
-            <Toggle
-              id="contrast"
-              checked={contrast}
-              onChange={(e) => setContrast(e.target.checked)}
-            />
+            <Toggle id="contrast" checked={contrast} onChange={(e) => setContrast(e.target.checked)} />
           }
         />
       </Section>
 
+      {/* SUN PROTECTION PROFILE */}
       <Section title="Sun Protection Profile">
-        <div style={{ padding: "16px 20px" }}>
-          <div
-            style={{
-              fontSize: 13,
-              fontWeight: 700,
-              color: "var(--fg)",
-              marginBottom: 12,
-            }}
-          >
+        <div style={{ padding: "16px 18px" }}>
+          <div style={{ fontSize: 13, fontWeight: 700, color: "var(--fg, #f0f0f0)", marginBottom: 12 }}>
             Fitzpatrick Skin Type
           </div>
           <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
@@ -370,63 +297,29 @@ export default function SettingsPage({
                   alignItems: "center",
                   gap: 12,
                   padding: "11px 14px",
-                  borderRadius: "var(--r-sm)",
-                  border: `1px solid ${skinType === s.type ? "var(--uv)" : "var(--border)"}`,
-                  background:
-                    skinType === s.type ? "var(--uv-10)" : "var(--surface)",
+                  borderRadius: 12,
+                  border: `1px solid ${skinType === s.type ? "var(--uv, #22c55e)" : "var(--border, rgba(255,255,255,0.08))"}`,
+                  background: skinType === s.type ? "var(--uv-10, rgba(34,197,94,0.08))" : "var(--bg-3, #111)",
                   cursor: "pointer",
                   transition: "all 0.15s",
                   width: "100%",
                   textAlign: "left",
-                  fontFamily: "var(--font-display)",
                 }}
               >
-                <div
-                  style={{
-                    width: 26,
-                    height: 26,
-                    borderRadius: "50%",
-                    background: s.swatch,
-                    border: "1px solid var(--border-2)",
-                    flexShrink: 0,
-                  }}
-                />
-                <div>
-                  <div
-                    style={{
-                      fontSize: 13,
-                      fontWeight: 700,
-                      color: skinType === s.type ? "var(--uv)" : "var(--fg)",
-                    }}
-                  >
-                    {s.label}
-                  </div>
-                  <div
-                    style={{ fontSize: 11, color: "var(--fg-2)", marginTop: 1 }}
-                  >
-                    {s.desc}
-                  </div>
+                <div style={{ width: 26, height: 26, borderRadius: "50%", background: s.swatch, border: "1px solid rgba(255,255,255,0.15)", flexShrink: 0 }} />
+                <div style={{ flex: 1 }}>
+                  <div style={{ fontSize: 13, fontWeight: 700, color: skinType === s.type ? "var(--uv, #22c55e)" : "var(--fg, #f0f0f0)" }}>{s.label}</div>
+                  <div style={{ fontSize: 11, color: "var(--fg-3, #888)", marginTop: 1 }}>{s.desc}</div>
                 </div>
-                {skinType === s.type && (
-                  <div style={{ marginLeft: "auto", color: "var(--uv)" }}>
-                    ✓
-                  </div>
-                )}
+                {skinType === s.type && <div style={{ color: "var(--uv, #22c55e)", fontSize: 16 }}>✓</div>}
               </button>
             ))}
           </div>
         </div>
-        <div style={{ padding: "0 20px 16px" }}>
-          <div
-            style={{
-              fontSize: 13,
-              fontWeight: 700,
-              color: "var(--fg)",
-              marginBottom: 12,
-            }}
-          >
-            Default SPF
-          </div>
+
+        {/* SPF */}
+        <div style={{ padding: "0 18px 16px" }}>
+          <div style={{ fontSize: 13, fontWeight: 700, color: "var(--fg, #f0f0f0)", marginBottom: 12 }}>Default SPF</div>
           <div style={{ display: "flex", gap: 8 }}>
             {SPF_OPTIONS.map((s) => (
               <button
@@ -435,64 +328,36 @@ export default function SettingsPage({
                 style={{
                   flex: 1,
                   padding: "12px 8px",
-                  borderRadius: "var(--r-sm)",
-                  border: `1px solid ${spf === s.val ? "var(--uv)" : "var(--border)"}`,
-                  background: spf === s.val ? "var(--uv-10)" : "var(--surface)",
+                  borderRadius: 12,
+                  border: `1px solid ${spf === s.val ? "var(--uv, #22c55e)" : "var(--border, rgba(255,255,255,0.08))"}`,
+                  background: spf === s.val ? "var(--uv-10, rgba(34,197,94,0.08))" : "var(--bg-3, #111)",
                   cursor: "pointer",
                   transition: "all 0.15s",
-                  fontFamily: "var(--font-display)",
                   display: "flex",
                   flexDirection: "column",
                   alignItems: "center",
                   gap: 3,
                 }}
               >
-                <div
-                  style={{
-                    fontSize: 14,
-                    fontWeight: 800,
-                    color: spf === s.val ? "var(--uv)" : "var(--fg)",
-                  }}
-                >
-                  {s.label}
-                </div>
-                <div
-                  style={{
-                    fontSize: 10,
-                    fontFamily: "var(--font-mono)",
-                    color: "var(--fg-3)",
-                  }}
-                >
-                  {s.note}
-                </div>
+                <div style={{ fontSize: 14, fontWeight: 800, color: spf === s.val ? "var(--uv, #22c55e)" : "var(--fg, #f0f0f0)" }}>{s.label}</div>
+                <div style={{ fontSize: 10, color: "var(--fg-3, #888)" }}>{s.note}</div>
               </button>
             ))}
           </div>
         </div>
       </Section>
 
+      {/* NOTIFICATIONS */}
       <Section title="Notifications">
         <Row
           label="UV Alerts"
           desc="Push notifications when UV reaches dangerous levels"
           right={
-            <Toggle
-              id="notif"
-              checked={notif}
-              onChange={(e) => handleNotifToggle(e.target.checked)}
-            />
+            <Toggle id="notif" checked={notif} onChange={(e) => handleNotifToggle(e.target.checked)} />
           }
         />
         {notifError && (
-          <div
-            style={{
-              padding: "8px 20px 12px",
-              fontSize: 11,
-              fontFamily: "var(--font-mono)",
-              color: "#ef4444",
-              lineHeight: 1.6,
-            }}
-          >
+          <div style={{ padding: "8px 18px 12px", fontSize: 11, fontFamily: "var(--font-mono)", color: "#ef4444", lineHeight: 1.6 }}>
             ✗ {notifError}
           </div>
         )}
@@ -500,11 +365,7 @@ export default function SettingsPage({
           label="Reapplication Reminders"
           desc="Periodic reminders to reapply sunscreen based on UV level"
           right={
-            <Toggle
-              id="reapply"
-              checked={reapply}
-              onChange={(e) => handleReapplyToggle(e.target.checked)}
-            />
+            <Toggle id="reapply" checked={reapply} onChange={(e) => { setReapply(e.target.checked); autoSave({ reapplyReminder: e.target.checked }); }} />
           }
         />
         <Row
@@ -514,7 +375,8 @@ export default function SettingsPage({
             <select
               className="settings-select"
               value={threshold}
-              onChange={(e) => handleThresholdChange(parseInt(e.target.value))}
+              onChange={(e) => { const v = parseInt(e.target.value); setThreshold(v); autoSave({ alertThreshold: v }); }}
+              style={{ background: "var(--bg-3, #111)", color: "var(--fg, #f0f0f0)", border: "1px solid var(--border-2, rgba(255,255,255,0.12))", borderRadius: 8, padding: "6px 10px", fontSize: 13 }}
             >
               <option value={3}>UV 3+ Moderate</option>
               <option value={6}>UV 6+ High</option>
@@ -523,46 +385,29 @@ export default function SettingsPage({
             </select>
           }
         />
-        <div style={{ padding: "12px 20px 16px" }}>
+        <div style={{ padding: "12px 18px 16px" }}>
           <button
             className="btn btn-ghost"
-            style={{ width: "100%", fontSize: 13 }}
+            style={{ width: "100%", fontSize: 13, background: "var(--bg-3, #111)", border: "1px solid var(--border-2, rgba(255,255,255,0.12))", borderRadius: 10, padding: "12px", color: "var(--fg-2, #ccc)", cursor: "pointer" }}
             onClick={async () => {
               setTestResult("Sending…");
               const result = await onTestNotif?.();
-              setTestResult(
-                result?.success
-                  ? "✓ Test notification sent!"
-                  : `✗ ${result?.error ?? "Failed"}`,
-              );
+              setTestResult(result?.success ? "✓ Test notification sent!" : `✗ ${result?.error ?? "Failed"}`);
               setTimeout(() => setTestResult(null), 4000);
             }}
           >
             🔔 Send Test Notification
           </button>
           {testResult && (
-            <div
-              style={{
-                marginTop: 8,
-                padding: "8px 12px",
-                borderRadius: "var(--r-sm)",
-                fontSize: 12,
-                fontFamily: "var(--font-mono)",
-                textAlign: "center",
-                background: testResult.startsWith("✓")
-                  ? "rgba(34,211,170,0.1)"
-                  : "rgba(239,68,68,0.1)",
-                color: testResult.startsWith("✓") ? "#22d3aa" : "#ef4444",
-                border: `1px solid ${testResult.startsWith("✓") ? "rgba(34,211,170,0.3)" : "rgba(239,68,68,0.3)"}`,
-              }}
-            >
+            <div style={{ marginTop: 8, padding: "8px 12px", borderRadius: 10, fontSize: 12, fontFamily: "var(--font-mono)", textAlign: "center", background: testResult.startsWith("✓") ? "rgba(34,211,170,0.1)" : "rgba(239,68,68,0.1)", color: testResult.startsWith("✓") ? "#22d3aa" : "#ef4444", border: `1px solid ${testResult.startsWith("✓") ? "rgba(34,211,170,0.3)" : "rgba(239,68,68,0.3)"}` }}>
               {testResult}
             </div>
           )}
         </div>
       </Section>
 
-      <Section title="Data & Privacy">
+      {/* DATA & PRIVACY */}
+      <Section title="Data &amp; Privacy">
         <Row
           label="Location Data"
           desc="Your GPS coordinates are only used to match the nearest city. Never stored on our servers."
@@ -572,11 +417,8 @@ export default function SettingsPage({
           desc="Clear saved location and ask again on next visit"
           right={
             <button
-              className="btn btn-ghost btn-sm"
-              onClick={() => {
-                localStorage.removeItem("uvibe_location");
-                window.location.reload();
-              }}
+              style={{ padding: "6px 14px", borderRadius: 8, border: "1px solid var(--border-2, rgba(255,255,255,0.15))", background: "var(--bg-3, #111)", color: "var(--fg-2, #ccc)", fontSize: 13, cursor: "pointer" }}
+              onClick={() => { localStorage.removeItem("uvibe_location"); window.location.reload(); }}
             >
               Reset
             </button>
@@ -584,51 +426,35 @@ export default function SettingsPage({
         />
       </Section>
 
-      <div className="anim-fade-up" style={{ marginBottom: 32 }}>
+      {/* SAVE */}
+      <div className="anim-fade-up" style={{ marginTop: 24, marginBottom: 32 }}>
         <button
-          className="btn btn-uv"
           onClick={handleSave}
           style={{
             width: "100%",
             padding: "16px",
             fontSize: 15,
             fontWeight: 800,
-            background: saved ? "#22d3aa" : "var(--uv)",
-            boxShadow: `0 8px 32px var(--uv-20)`,
+            borderRadius: 14,
+            border: "none",
+            background: saved ? "#22d3aa" : "#22c55e",
+            color: "#fff",
+            cursor: "pointer",
+            boxShadow: "0 8px 32px rgba(34,197,94,0.3)",
             transition: "background 0.3s",
           }}
         >
-          {saved ? "✓ Saved" : "Save Changes"}
+          {saved ? "✓ Saved!" : "Save Changes"}
         </button>
       </div>
 
+      {/* About */}
       <div className="anim-fade-up" style={{ marginBottom: 32 }}>
-        <div
-          style={{
-            background: "var(--bg-2)",
-            border: "1px solid var(--border)",
-            borderRadius: "var(--r)",
-            padding: 20,
-          }}
-        >
-          <div
-            style={{
-              fontSize: 11,
-              fontFamily: "var(--font-mono)",
-              color: "var(--fg-3)",
-              letterSpacing: 1,
-              marginBottom: 8,
-            }}
-          >
-            ABOUT UVIBE
-          </div>
-          <div style={{ fontSize: 13, color: "var(--fg-2)", lineHeight: 1.7 }}>
-            UV data courtesy of{" "}
-            <strong style={{ color: "var(--fg)" }}>ARPANSA</strong> (Australian
-            Radiation Protection and Nuclear Safety Agency).
-            <br />
-            Weather data by{" "}
-            <strong style={{ color: "var(--fg)" }}>OpenWeather</strong>.<br />
+        <div style={{ background: "var(--bg-2, #0d0d1a)", border: "1px solid var(--border, rgba(255,255,255,0.08))", borderRadius: 14, padding: 20 }}>
+          <div style={{ fontSize: 11, fontFamily: "var(--font-mono)", color: "var(--fg-3, #888)", letterSpacing: 1, marginBottom: 8 }}>ABOUT UVIBE</div>
+          <div style={{ fontSize: 13, color: "var(--fg-2, #aaa)", lineHeight: 1.7 }}>
+            UV data courtesy of <strong style={{ color: "var(--fg, #f0f0f0)" }}>ARPANSA</strong> (Australian Radiation Protection and Nuclear Safety Agency).<br />
+            Weather data by <strong style={{ color: "var(--fg, #f0f0f0)" }}>OpenWeather</strong>.
           </div>
         </div>
       </div>

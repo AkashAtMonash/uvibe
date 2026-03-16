@@ -4,7 +4,7 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
-    "build": "npx prisma generate && next build",
+    "build": "next build",
     "start": "next start",
     "lint": "eslint",
     "postinstall": "npx prisma generate"
@@ -15,17 +15,25 @@
     "@prisma/client": "^7.4.2",
     "arpansa-uv-data": "^1.1.1",
     "axios": "^1.13.6",
+    "clsx": "^2.1.1",
+    "d3": "^7.9.0",
     "dotenv": "^17.3.1",
     "fast-xml-parser": "^5.5.2",
+    "framer-motion": "^12.36.0",
+    "lucide-react": "^0.577.0",
     "next": "16.1.6",
     "pg": "^8.20.0",
     "prisma": "^7.4.2",
     "react": "19.2.3",
     "react-dom": "19.2.3",
+    "tailwind-merge": "^3.5.0",
+    "topojson-client": "^3.1.0",
     "web-push": "^3.6.7"
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4",
+    "@types/node": "^25.5.0",
+    "@types/react": "^19.2.14",
     "eslint": "^9",
     "eslint-config-next": "16.1.6",
     "tailwindcss": "^4"
