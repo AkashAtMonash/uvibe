@@ -94,9 +94,10 @@ export async function POST(request) {
     });
 
     return NextResponse.json({ success: true, reading });
-  } catch {
+  } catch (err) {
+    console.error("Failed to save reading:", err);
     return NextResponse.json(
-      { error: "Failed to save reading" },
+      { error: "Failed to save reading", detail: err.message },
       { status: 500 },
     );
   }

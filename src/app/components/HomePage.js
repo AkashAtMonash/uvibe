@@ -62,7 +62,7 @@ export default function HomePage({
       setApiStatus("ok");
       setLastUpdated(new Date());
       setUvFailed(false);
-      onSaveReading?.(city, uvVal, data.source || "api");
+      onSaveReading?.(c?.name || "Melbourne", uvVal, data.source || "api");
       onUVUpdate?.(uvVal);
     } catch {
       try {
@@ -80,7 +80,7 @@ export default function HomePage({
         setApiStatus("fallback");
         setLastUpdated(new Date());
         setUvFailed(false);
-        onSaveReading?.(city, fallbackVal, "open-meteo");
+        onSaveReading?.(c?.name || "Melbourne", fallbackVal, "open-meteo");
         onUVUpdate?.(fallbackVal);
       } catch {
         setApiStatus("error");
