@@ -199,7 +199,7 @@ export default function HomePage({
   const isDark = theme === "dark" || theme === "black";
 
   return (
-    <div className="flex-1 overflow-y-auto overflow-x-hidden scroll-smooth p-6 pb-[88px] md:p-8 md:pb-12 md:max-w-4xl md:mx-auto">
+    <div className="flex-1 overflow-y-auto overflow-x-hidden scroll-smooth p-6 md:p-8 md:max-w-4xl md:mx-auto">
 
       {/* ── Top bar ── */}
       <div className="w-full flex items-center gap-3 mb-2 relative z-[300]">

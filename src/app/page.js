@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback } from "react";
 import "@/app/globals.css";
 
-import { Sidebar, BottomNav } from "@/app/components/Nav";
+import { Sidebar } from "@/app/components/Nav";
 import LocationModal from "@/app/components/LocationModal";
 import LandingPage from "@/app/components/LandingPage";
 import HomePage from "@/app/components/HomePage";
@@ -227,7 +227,7 @@ export default function Page() {
       />
 
       <div className="flex-1 flex flex-col min-w-0 relative z-10 h-full overflow-hidden">
-        <div className="flex-1 w-full h-full overflow-y-auto no-scrollbar pb-[80px] md:pb-0">
+        <div className="flex-1 w-full h-full overflow-y-auto no-scrollbar">
           {page === "home" && (
             <HomePage
               city={city}
@@ -262,7 +262,6 @@ export default function Page() {
             />
           )}
         </div>
-        <BottomNav page={page} setPage={setPage} hasNotif={uv >= 8} theme={theme} setTheme={setTheme} />
       </div>
     </div>
   );
