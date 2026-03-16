@@ -2,9 +2,11 @@ import withPWA from "@ducanh2912/next-pwa";
 
 const pwa = withPWA({
   dest: "public",
-  register: true,
+  register: false,
   skipWaiting: true,
-  disable: process.env.NODE_ENV === "development",
+  workboxOptions: {
+    importScripts: ["/worker-custom.js"],
+  },
 });
 
 export default pwa({
