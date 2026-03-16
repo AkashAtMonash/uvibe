@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback } from "react";
 import "@/app/globals.css";
 
-import { Sidebar } from "@/app/components/Nav";
+import { Sidebar, BottomNav } from "@/app/components/Nav";
 import LocationModal from "@/app/components/LocationModal";
 import LandingPage from "@/app/components/LandingPage";
 import HomePage from "@/app/components/HomePage";
@@ -35,7 +35,13 @@ export default function Page() {
   // All state starts with server-safe defaults — localStorage hydration happens in useEffect
   const [screen, setScreen] = useState("loading");
   const [page, setPage] = useState("home");
-  const [city, setCity] = useState({ name: "Melbourne", lat: -37.81, lon: 144.96, state: "VIC", arpansa: "Melbourne" });
+  const [city, setCity] = useState({
+    name: "Melbourne",
+    lat: -37.81,
+    lon: 144.96,
+    state: "VIC",
+    arpansa: "Melbourne",
+  });
   const [showModal, setShowModal] = useState(false);
   const [geoGranted, setGeoGranted] = useState(false);
   const [theme, setTheme] = useState("black");
@@ -72,8 +78,12 @@ export default function Page() {
         if (c && typeof c === "object" && c.lat) {
           setCity(c);
         } else {
-          const name = typeof c === "string" ? c : c?.name ?? "Melbourne";
-          setCity(CITIES[name] ? { ...CITIES[name], name } : { name, lat: -37.81, lon: 144.96, state: "VIC", arpansa: name });
+          const name = typeof c === "string" ? c : (c?.name ?? "Melbourne");
+          setCity(
+            CITIES[name]
+              ? { ...CITIES[name], name }
+              : { name, lat: -37.81, lon: 144.96, state: "VIC", arpansa: name },
+          );
         }
         setGeoGranted(granted);
         setScreen("app");
@@ -135,7 +145,13 @@ export default function Page() {
         const detectedName = nearestCity(lat, lon);
         const detectedCity = CITIES[detectedName]
           ? { ...CITIES[detectedName], name: detectedName, lat, lon }
-          : { name: detectedName, lat, lon, state: "AU", arpansa: detectedName };
+          : {
+              name: detectedName,
+              lat,
+              lon,
+              state: "AU",
+              arpansa: detectedName,
+            };
         setCity(detectedCity);
         setGeoGranted(true);
         localStorage.setItem(
@@ -146,7 +162,13 @@ export default function Page() {
         setScreen("app");
       },
       () => {
-        const melbCity = { name: "Melbourne", lat: -37.81, lon: 144.96, state: "VIC", arpansa: "Melbourne" };
+        const melbCity = {
+          name: "Melbourne",
+          lat: -37.81,
+          lon: 144.96,
+          state: "VIC",
+          arpansa: "Melbourne",
+        };
         setCity(melbCity);
         localStorage.setItem(
           "uvibe_location",
@@ -159,7 +181,13 @@ export default function Page() {
 
   const handleDeny = useCallback(() => {
     setShowModal(false);
-    const melbCity = { name: "Melbourne", lat: -37.81, lon: 144.96, state: "VIC", arpansa: "Melbourne" };
+    const melbCity = {
+      name: "Melbourne",
+      lat: -37.81,
+      lon: 144.96,
+      state: "VIC",
+      arpansa: "Melbourne",
+    };
     setCity(melbCity);
     localStorage.setItem(
       "uvibe_location",
@@ -211,7 +239,10 @@ export default function Page() {
 
   return (
     <div className="flex h-[100dvh] w-full overflow-hidden relative">
-      <div className="absolute inset-0 pointer-events-none z-0 transition-colors duration-1000" style={{ background: ambientBg }} />
+      <div
+        className="absolute inset-0 pointer-events-none z-0 transition-colors duration-1000"
+        style={{ background: ambientBg }}
+      />
 
       <WelcomeModal />
       {showModal && <LocationModal onAllow={handleAllow} onDeny={handleDeny} />}
@@ -227,7 +258,8 @@ export default function Page() {
       />
 
       <div className="flex-1 flex flex-col min-w-0 relative z-10 h-full overflow-hidden">
-        <div className="flex-1 w-full h-full overflow-y-auto no-scrollbar">
+        {/* pb-24 on mobile gives space for the fixed BottomNav; removed on md+ */}
+        <div className="flex-1 w-full h-full overflow-y-auto no-scrollbar pb-24 md:pb-0">
           {page === "home" && (
             <HomePage
               city={city}
@@ -263,6 +295,15 @@ export default function Page() {
           )}
         </div>
       </div>
+
+      {/* Mobile bottom navigation — hidden on md+ where Sidebar takes over */}
+      <BottomNav
+        page={page}
+        setPage={setPage}
+        hasNotif={uv >= 8}
+        theme={theme}
+        setTheme={setTheme}
+      />
     </div>
   );
 }
