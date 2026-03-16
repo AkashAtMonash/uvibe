@@ -102,6 +102,15 @@ export function getLevel(uv) {
   return UV_LEVELS.find((l) => uv >= l.min && uv <= l.max) || UV_LEVELS[0];
 }
 
+export function applyUVTheme(level) {
+  if (typeof document === "undefined" || !level) return;
+
+  const root = document.documentElement;
+  root.style.setProperty("--uv-color", level.color || UV_LEVELS[0].color);
+  root.style.setProperty("--uv-dim", level.dim || UV_LEVELS[0].dim);
+  root.style.setProperty("--uv-glow", level.glow || UV_LEVELS[0].glow);
+}
+
 // Calculates time to skin damage based on WHO/ARPANSA burn time formula
 // bare:  TS / UVI  (unprotected skin, Australian-calibrated)
 // prot:  bare × SPF × 0.4 (real-world SPF factor — people apply ~40% of test dose)
@@ -171,16 +180,24 @@ export function getDynamicInterval(uv) {
 }
 
 export function nearestCity(lat, lon) {
-  let best = "Melbourne",
-    bestD = Infinity;
-  Object.entries(CITIES).forEach(([name, c]) => {
-    const d = Math.sqrt((lat - c.lat) ** 2 + (lon - c.lon) ** 2);
-    if (d < bestD) {
-      bestD = d;
-      best = name;
+  if (!Number.isFinite(lat) || !Number.isFinite(lon)) return "Melbourne";
+
+  let bestCity = "Melbourne";
+  let bestDist = Infinity;
+
+  for (const [name, coords] of Object.entries(CITIES)) {
+    if (!coords) continue;
+    const dLat = lat - coords.lat;
+    const dLon = lon - coords.lon;
+    const dist = dLat * dLat + dLon * dLon;
+
+    if (dist < bestDist) {
+      bestDist = dist;
+      bestCity = name;
     }
-  });
-  return best;
+  }
+
+  return bestCity;
 }
 
 export function simulateUV(city) {
@@ -195,9 +212,29 @@ export function simulateUV(city) {
   );
 }
 
-export function applyUVTheme(lv) {
-  const r = document.documentElement;
-  r.style.setProperty("--uv", lv.color);
-  r.style.setProperty("--uv-10", lv.dim);
-  r.style.setProperty("--uv-20", lv.glow);
+export function buildForecast(city) {
+  return Array.from({ length: 24 }, (_, i) => {
+    const h = new Date();
+    // Start from midnight of the current day to show a full 24h curve
+    h.setHours(0, 0, 0, 0);
+    h.setHours(i);
+    const hr = h.getHours();
+
+    // Smooth bell curve modifier for sunlight
+    let mod = 0.02; // baseline night
+    if (hr > 6 && hr < 19) {
+      // Create a parabolic curve peaking at 1 PM (hour 13)
+      const distFromNoon = Math.abs(hr - 13);
+      mod = Math.max(0.05, 1 - (distFromNoon / 6.5) ** 2);
+    }
+
+    const baseUV = BASE_UV[city] ?? 8;
+    // Add tiny bit of noise but keeping it mostly smooth
+    const val = Math.max(0, parseFloat((baseUV * mod + (Math.random() - 0.5) * 0.15).toFixed(1)));
+
+    const isNow = new Date().getHours() === hr;
+    const lbl = hr === 0 ? "12am" : `${hr > 12 ? hr - 12 : hr || 12}${hr >= 12 ? "pm" : "am"}`;
+
+    return { label: lbl, val, lv: getLevel(val), now: isNow };
+  });
 }

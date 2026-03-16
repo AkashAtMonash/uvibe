@@ -1,22 +1,7 @@
-import { PrismaClient } from "../generated/prisma/index.js";
-import { PrismaPg } from "@prisma/adapter-pg";
-import pg from "pg";
-
-const { Pool } = pg;
+import { PrismaClient } from "@prisma/client";
 
 const globalForPrisma = globalThis;
 
-const pool =
-  globalForPrisma.pool ??
-  new Pool({
-    connectionString: process.env.DATABASE_URL,
-  });
+export const prisma = globalForPrisma.prisma ?? new PrismaClient();
 
-const adapter = new PrismaPg(pool);
-
-export const prisma = globalForPrisma.prisma ?? new PrismaClient({ adapter });
-
-if (process.env.NODE_ENV !== "production") {
-  globalForPrisma.pool = pool;
-  globalForPrisma.prisma = prisma;
-}
+if (process.env.NODE_ENV !== "production") globalForPrisma.prisma = prisma;

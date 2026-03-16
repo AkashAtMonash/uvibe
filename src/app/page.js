@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback, useRef } from "react";
+import { useState, useEffect, useCallback } from "react";
 import "@/app/globals.css";
 
 import { Sidebar, BottomNav } from "@/app/components/Nav";
@@ -9,13 +9,17 @@ import LandingPage from "@/app/components/LandingPage";
 import HomePage from "@/app/components/HomePage";
 import SettingsPage from "@/app/components/SettingsPage";
 import PreventionPage from "@/app/components/PreventionPage";
+import WelcomeModal from "@/app/components/WelcomeModal";
+import AwarenessPage from "@/app/components/AwarenessPage";
 
 import { nearestCity, getLevel, applyUVTheme } from "@/utils/uv";
 import { useUserSync } from "@/hooks/useUserSync";
 
 const DEFAULT_PREFS = {
   skinType: "III",
-  spf: 50,
+  spf: 30,
+  weightKg: 70,
+  ageYears: 25,
   notifEnabled: false,
   reapplyReminder: false,
   alertThreshold: 6,
@@ -27,29 +31,17 @@ function BlankPage({ label }) {
   return <div className="blank-page">{label.toUpperCase()}</div>;
 }
 
-function useIsMobile() {
-  const [mobile, setMobile] = useState(false);
-  useEffect(() => {
-    const check = () => setMobile(window.innerWidth < 1100);
-    check();
-    window.addEventListener("resize", check);
-    return () => window.removeEventListener("resize", check);
-  }, []);
-  return mobile;
-}
-
 export default function Page() {
   // All state starts with server-safe defaults — localStorage hydration happens in useEffect
   const [screen, setScreen] = useState("loading");
   const [page, setPage] = useState("home");
-  const [city, setCity] = useState({ name: "Melbourne", lat: -37.81, lon: 144.96, state: "VIC", arpansa: "Melbourne" });
+  const [city, setCity] = useState("Melbourne");
   const [showModal, setShowModal] = useState(false);
   const [geoGranted, setGeoGranted] = useState(false);
   const [theme, setTheme] = useState("black");
   const [contrast, setContrast] = useState(false);
   const [prefs, setPrefs] = useState(DEFAULT_PREFS);
   const [uv, setUv] = useState(0);
-  const isMobile = useIsMobile();
 
   const {
     requestAndRegister,
@@ -76,11 +68,13 @@ export default function Page() {
 
       if (loc) {
         const { city: c, granted } = JSON.parse(loc);
-        setCity(c);
+        setCity(typeof c === "string" ? c : c?.name ?? "Melbourne");
         setGeoGranted(granted);
         setScreen("app");
       } else {
-        setScreen(window.innerWidth < 1100 ? "modal" : "landing");
+        // No saved location — always show modal first (mobile or desktop)
+        setShowModal(true);
+        setScreen("modal");
       }
     } catch {
       setScreen("landing");
@@ -91,6 +85,12 @@ export default function Page() {
     if (screen === "loading") return;
     const doc = document.documentElement;
     doc.setAttribute("data-theme", theme);
+    // Both 'dark' and 'black' should use dark mode Tailwind classes
+    if (theme === "dark" || theme === "black") {
+      doc.classList.add("dark");
+    } else {
+      doc.classList.remove("dark");
+    }
     doc.setAttribute("data-contrast", contrast ? "high" : "");
     localStorage.setItem("uvibe_theme", theme);
     localStorage.setItem("uvibe_contrast", contrast.toString());
@@ -126,7 +126,8 @@ export default function Page() {
       async (pos) => {
         const lat = pos.coords.latitude;
         const lon = pos.coords.longitude;
-        setGeoCoords({ lat, lon });
+        const detected = nearestCity(lat, lon);
+        setCity(detected);
         setGeoGranted(true);
         localStorage.setItem(
           "uvibe_location",
@@ -148,11 +149,10 @@ export default function Page() {
 
   const handleDeny = useCallback(() => {
     setShowModal(false);
-    const fall = { name: "Melbourne", lat: -37.81, lon: 144.96, state: "VIC", arpansa: "Melbourne" };
-    setCity(fall);
+    setCity("Melbourne");
     localStorage.setItem(
       "uvibe_location",
-      JSON.stringify({ city: fall, granted: false }),
+      JSON.stringify({ city: "Melbourne", granted: false }),
     );
     syncCity("Melbourne");
     setScreen("app");
@@ -197,8 +197,8 @@ export default function Page() {
   const ambientBg = `radial-gradient(ellipse 70% 40% at 50% 0%, ${lv.glow} 0%, transparent 60%)`;
 
   return (
-    <div className="app-shell">
-      <div className="app-bg" style={{ background: ambientBg }} />
+    <div className="flex h-[100dvh] w-full overflow-hidden relative">
+      <div className="absolute inset-0 pointer-events-none z-0 transition-colors duration-1000" style={{ background: ambientBg }} />
 
       <WelcomeModal />
       {showModal && <LocationModal onAllow={handleAllow} onDeny={handleDeny} />}
@@ -209,25 +209,29 @@ export default function Page() {
         city={city}
         geoGranted={geoGranted}
         hasNotif={uv >= 8}
+        theme={theme}
+        setTheme={setTheme}
       />
 
-      <div className="app-content">
-        <div className="page-scroll">
+      <div className="flex-1 flex flex-col min-w-0 relative z-10 h-full overflow-hidden">
+        <div className="flex-1 w-full h-full overflow-y-auto no-scrollbar pb-[80px] md:pb-0">
           {page === "home" && (
             <HomePage
               city={city}
               setCity={setCity}
               prefs={prefs}
               geoGranted={geoGranted}
-              onRequestGeo={() => setShowModal(true)}
+              onRequestGeo={handleAllow}
               onSaveReading={saveReading}
               onUVUpdate={setUv}
               onRequestNotif={requestAndRegister}
               onSyncPrefs={handleSyncPrefs}
               sendTestNotification={sendTestNotification}
+              theme={theme}
+              setTheme={setTheme}
             />
           )}
-          {page === "awareness" && <BlankPage label="Awareness" />}
+          {page === "awareness" && <AwarenessPage />}
           {page === "prevention" && (
             <PreventionPage city={city} uv={uv} prefs={prefs} />
           )}
@@ -245,7 +249,7 @@ export default function Page() {
             />
           )}
         </div>
-        <BottomNav page={page} setPage={setPage} hasNotif={uv >= 8} />
+        <BottomNav page={page} setPage={setPage} hasNotif={uv >= 8} theme={theme} setTheme={setTheme} />
       </div>
     </div>
   );
