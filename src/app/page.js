@@ -1,10 +1,10 @@
+// src/app/page.js
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
 import "@/app/globals.css";
 
 import { Sidebar, BottomNav } from "@/app/components/Nav";
-import LocationModal from "@/app/components/LocationModal";
 import LandingPage from "@/app/components/LandingPage";
 import HomePage from "@/app/components/HomePage";
 import SettingsPage from "@/app/components/SettingsPage";
@@ -27,22 +27,25 @@ const DEFAULT_PREFS = {
   ageRange: "",
 };
 
-function BlankPage({ label }) {
-  return <div className="blank-page">{label.toUpperCase()}</div>;
+const MELBOURNE = {
+  name: "Melbourne",
+  lat: -37.81,
+  lon: 144.96,
+  state: "VIC",
+  arpansa: "Melbourne",
+};
+
+function resolveCity(raw) {
+  if (!raw) return MELBOURNE;
+  if (typeof raw === "object" && raw.lat) return raw;
+  const name = typeof raw === "string" ? raw : (raw?.name ?? "Melbourne");
+  return CITIES[name] ? { ...CITIES[name], name } : { ...MELBOURNE, name };
 }
 
 export default function Page() {
-  // All state starts with server-safe defaults — localStorage hydration happens in useEffect
   const [screen, setScreen] = useState("loading");
   const [page, setPage] = useState("home");
-  const [city, setCity] = useState({
-    name: "Melbourne",
-    lat: -37.81,
-    lon: 144.96,
-    state: "VIC",
-    arpansa: "Melbourne",
-  });
-  const [showModal, setShowModal] = useState(false);
+  const [city, setCity] = useState(MELBOURNE);
   const [geoGranted, setGeoGranted] = useState(false);
   const [theme, setTheme] = useState("black");
   const [contrast, setContrast] = useState(false);
@@ -58,7 +61,40 @@ export default function Page() {
   } = useUserSync();
   const lv = getLevel(uv);
 
-  // Single hydration effect — reads localStorage once on mount, sets all state, then reveals UI
+  // Triggers browser native geolocation prompt — no custom modal
+  const requestGeo = useCallback(() => {
+    if (!navigator.geolocation) return;
+    navigator.geolocation.getCurrentPosition(
+      (pos) => {
+        const detectedName = nearestCity(
+          pos.coords.latitude,
+          pos.coords.longitude,
+        );
+        const detectedCity = CITIES[detectedName]
+          ? { ...CITIES[detectedName], name: detectedName }
+          : { ...MELBOURNE, name: detectedName };
+        setCity(detectedCity);
+        setGeoGranted(true);
+        localStorage.setItem(
+          "uvibe_location",
+          JSON.stringify({ city: detectedCity, granted: true }),
+        );
+        syncCity(detectedName);
+      },
+      () => {
+        // Denied or timed out — fall back silently to Melbourne
+        setCity(MELBOURNE);
+        setGeoGranted(false);
+        localStorage.setItem(
+          "uvibe_location",
+          JSON.stringify({ city: MELBOURNE, granted: false }),
+        );
+      },
+      { timeout: 8000, maximumAge: 300000 },
+    );
+  }, [syncCity]);
+
+  // Single hydration effect
   useEffect(() => {
     try {
       const loc = localStorage.getItem("uvibe_location");
@@ -74,23 +110,13 @@ export default function Page() {
 
       if (loc) {
         const { city: c, granted } = JSON.parse(loc);
-        // Restore as full object if available, else treat as string (backwards compat)
-        if (c && typeof c === "object" && c.lat) {
-          setCity(c);
-        } else {
-          const name = typeof c === "string" ? c : (c?.name ?? "Melbourne");
-          setCity(
-            CITIES[name]
-              ? { ...CITIES[name], name }
-              : { name, lat: -37.81, lon: 144.96, state: "VIC", arpansa: name },
-          );
-        }
-        setGeoGranted(granted);
+        setCity(resolveCity(c));
+        setGeoGranted(granted ?? false);
         setScreen("app");
       } else {
-        // No saved location — always show modal first (mobile or desktop)
-        setShowModal(true);
-        setScreen("modal");
+        // First visit — fire browser prompt immediately, no blocking modal
+        requestGeo();
+        setScreen(window.innerWidth < 1100 ? "app" : "landing");
       }
     } catch {
       setScreen("landing");
@@ -101,7 +127,6 @@ export default function Page() {
     if (screen === "loading") return;
     const doc = document.documentElement;
     doc.setAttribute("data-theme", theme);
-    // Both 'dark' and 'black' should use dark mode Tailwind classes
     if (theme === "dark" || theme === "black") {
       doc.classList.add("dark");
     } else {
@@ -132,81 +157,6 @@ export default function Page() {
     applyUVTheme(lv);
   }, [lv]);
 
-  const handleAllow = useCallback(() => {
-    setShowModal(false);
-    if (!navigator.geolocation) {
-      setScreen("app");
-      return;
-    }
-    navigator.geolocation.getCurrentPosition(
-      async (pos) => {
-        const lat = pos.coords.latitude;
-        const lon = pos.coords.longitude;
-        const detectedName = nearestCity(lat, lon);
-        const detectedCity = CITIES[detectedName]
-          ? { ...CITIES[detectedName], name: detectedName, lat, lon }
-          : {
-              name: detectedName,
-              lat,
-              lon,
-              state: "AU",
-              arpansa: detectedName,
-            };
-        setCity(detectedCity);
-        setGeoGranted(true);
-        localStorage.setItem(
-          "uvibe_location",
-          JSON.stringify({ city: detectedCity, granted: true }),
-        );
-        syncCity(detectedName);
-        setScreen("app");
-      },
-      () => {
-        const melbCity = {
-          name: "Melbourne",
-          lat: -37.81,
-          lon: 144.96,
-          state: "VIC",
-          arpansa: "Melbourne",
-        };
-        setCity(melbCity);
-        localStorage.setItem(
-          "uvibe_location",
-          JSON.stringify({ city: melbCity, granted: false }),
-        );
-        setScreen("app");
-      },
-    );
-  }, [syncCity]);
-
-  const handleDeny = useCallback(() => {
-    setShowModal(false);
-    const melbCity = {
-      name: "Melbourne",
-      lat: -37.81,
-      lon: 144.96,
-      state: "VIC",
-      arpansa: "Melbourne",
-    };
-    setCity(melbCity);
-    localStorage.setItem(
-      "uvibe_location",
-      JSON.stringify({ city: melbCity, granted: false }),
-    );
-    syncCity("Melbourne");
-    setScreen("app");
-  }, [syncCity]);
-
-  const handleEnter = useCallback(() => {
-    const saved = localStorage.getItem("uvibe_location");
-    if (saved) {
-      setScreen("app");
-    } else {
-      setShowModal(true);
-      setScreen("modal");
-    }
-  }, []);
-
   const handleSyncPrefs = useCallback(
     (updated) => {
       setPrefs(updated);
@@ -215,26 +165,19 @@ export default function Page() {
     [syncPrefs],
   );
 
-  // Render nothing while hydrating — prevents any flash or mismatch
+  const handleEnter = useCallback(() => {
+    const saved = localStorage.getItem("uvibe_location");
+    if (!saved) requestGeo();
+    setScreen("app");
+  }, [requestGeo]);
+
   if (screen === "loading") return null;
 
   if (screen === "landing") {
-    return (
-      <>
-        {showModal && (
-          <LocationModal onAllow={handleAllow} onDeny={handleDeny} />
-        )}
-        <LandingPage onEnter={handleEnter} />
-      </>
-    );
-  }
-
-  if (screen === "modal") {
-    return <LocationModal onAllow={handleAllow} onDeny={handleDeny} />;
+    return <LandingPage onEnter={handleEnter} />;
   }
 
   const ambientBg = `radial-gradient(ellipse 70% 40% at 50% 0%, ${lv.glow} 0%, transparent 60%)`;
-  // Derived city name string for components that render it as text
   const cityName = typeof city === "string" ? city : city?.name || "Melbourne";
 
   return (
@@ -245,7 +188,6 @@ export default function Page() {
       />
 
       <WelcomeModal />
-      {showModal && <LocationModal onAllow={handleAllow} onDeny={handleDeny} />}
 
       <Sidebar
         page={page}
@@ -258,7 +200,6 @@ export default function Page() {
       />
 
       <div className="flex-1 flex flex-col min-w-0 relative z-10 h-full overflow-hidden">
-        {/* pb-24 on mobile gives space for the fixed BottomNav; removed on md+ */}
         <div className="flex-1 w-full h-full overflow-y-auto no-scrollbar pb-24 md:pb-0">
           {page === "home" && (
             <HomePage
@@ -266,7 +207,7 @@ export default function Page() {
               setCity={setCity}
               prefs={prefs}
               geoGranted={geoGranted}
-              onRequestGeo={handleAllow}
+              onRequestGeo={requestGeo}
               onSaveReading={saveReading}
               onUVUpdate={setUv}
               onRequestNotif={requestAndRegister}
@@ -296,7 +237,6 @@ export default function Page() {
         </div>
       </div>
 
-      {/* Mobile bottom navigation — hidden on md+ where Sidebar takes over */}
       <BottomNav
         page={page}
         setPage={setPage}
