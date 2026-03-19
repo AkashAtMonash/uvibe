@@ -1,57 +1,88 @@
+// src/app/components/CitySearch.js
 "use client";
 
 import { useState, useRef, useEffect } from "react";
-import { Search, X, ChevronDown, Check, Loader2, Hash } from "lucide-react";
+import {
+  Search,
+  X,
+  ChevronDown,
+  Check,
+  Loader2,
+  MapPin,
+  Radio,
+} from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
+import { CITIES } from "@/utils/uv";
+
+// All ARPANSA-monitored cities with live UV data
+const ARPANSA_CITIES = Object.entries(CITIES).map(([name, data]) => ({
+  id: `arpansa-${name}`,
+  name,
+  lat: data.lat,
+  lon: data.lon,
+  state: data.state,
+  arpansa: data.arpansa,
+  isARPANSA: true,
+}));
 
 export default function CitySearch({ city, setCity, uvColor }) {
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState("");
-  
-  const [results, setResults] = useState([]);
+  const [postcodeResults, setPostcodeResults] = useState([]);
   const [loading, setLoading] = useState(false);
 
   const wrapRef = useRef(null);
   const inputRef = useRef(null);
 
-  // Debounced Search — Australian postcodes
+  const isNumeric = (s) => /^\d+$/.test(s.trim());
+
+  // Filter ARPANSA cities instantly by name
+  const cityResults =
+    query.trim().length > 0 && !isNumeric(query)
+      ? ARPANSA_CITIES.filter(
+          (c) =>
+            c.name.toLowerCase().includes(query.trim().toLowerCase()) ||
+            c.state.toLowerCase().includes(query.trim().toLowerCase()),
+        )
+      : [];
+
+  // Debounced postcode search via /api/geocode
   useEffect(() => {
     const q = query.trim();
-    
-    if (q.length === 0) {
-      setResults([]);
+    if (!isNumeric(q) || q.length < 3) {
+      setPostcodeResults([]);
       return;
     }
-
     const timer = setTimeout(async () => {
       setLoading(true);
       try {
-        let auResults = [];
-
-        // OpenWeather API route for Postcodes
         const res = await fetch(`/api/geocode?zip=${encodeURIComponent(q)}`);
         if (res.ok) {
           const data = await res.json();
-          auResults = [{
-            id: `postcode-${data.postcode}`,
-            name: data.name,
-            latitude: data.lat,
-            longitude: data.lon,
-            admin1: data.state || "",
-            postcode: data.postcode
-          }];
+          setPostcodeResults([
+            {
+              id: `postcode-${data.postcode}`,
+              name: data.name,
+              lat: data.lat,
+              lon: data.lon,
+              state: data.state || "",
+              arpansa: data.name,
+              postcode: data.postcode,
+              isARPANSA: false,
+            },
+          ]);
+        } else {
+          setPostcodeResults([]);
         }
-        
-        setResults(auResults);
       } catch {
-        setResults([]);
+        setPostcodeResults([]);
       }
       setLoading(false);
     }, 400);
-
     return () => clearTimeout(timer);
   }, [query]);
 
+  // Close on outside click
   useEffect(() => {
     const close = (e) => {
       if (wrapRef.current && !wrapRef.current.contains(e.target)) {
@@ -66,157 +97,446 @@ export default function CitySearch({ city, setCity, uvColor }) {
   const handleSelect = (result) => {
     setCity({
       name: result.name,
-      lat: result.latitude,
-      lon: result.longitude,
-      state: result.admin1 || "AU",
-      arpansa: result.name,
+      lat: result.lat,
+      lon: result.lon,
+      state: result.state || "AU",
+      arpansa: result.arpansa || result.name,
     });
     setQuery("");
     setOpen(false);
   };
 
-  const displayCity = typeof city === "string" ? city : city?.name || "Melbourne";
+  const displayCity =
+    typeof city === "string" ? city : city?.name || "Melbourne";
+  const allResults = [...cityResults, ...postcodeResults];
+  const showEmpty =
+    query.trim().length > 0 && allResults.length === 0 && !loading;
+  const showDefault = query.trim().length === 0;
 
   return (
     <div ref={wrapRef} style={{ flex: 1, position: "relative" }}>
-      {/* TRIGGER BUTTON */}
+      {/* ── Trigger button ── */}
       <motion.button
         whileHover={{ scale: 1.01 }}
         whileTap={{ scale: 0.98 }}
         onClick={() => {
-          setOpen((prev) => !prev);
-          if (!open) {
-            setTimeout(() => {
-              inputRef.current?.focus();
-            }, 100);
-          }
+          setOpen((p) => !p);
+          if (!open) setTimeout(() => inputRef.current?.focus(), 80);
         }}
         style={{
-          width: "100%", display: "flex", alignItems: "center", gap: 12, padding: "12px 18px",
-          borderRadius: 20, background: "var(--bg-2, #fff)",
-          border: `1.5px solid ${open ? uvColor : "var(--border, rgba(0,0,0,0.08))"}`,
+          width: "100%",
+          display: "flex",
+          alignItems: "center",
+          gap: 12,
+          padding: "12px 18px",
+          borderRadius: 20,
+          background: "var(--bg-2, #1a1a1a)",
+          border: `1.5px solid ${open ? uvColor : "var(--border, rgba(255,255,255,0.08))"}`,
           boxShadow: open ? `0 0 0 4px ${uvColor}25` : "none",
-          transition: "all 0.3s cubic-bezier(0.4, 0, 0.2, 1)", cursor: "pointer",
+          transition: "all 0.3s cubic-bezier(0.4,0,0.2,1)",
+          cursor: "pointer",
         }}
       >
-        <div style={{ color: open ? uvColor : "var(--fg-3, #9ca3af)", transition: "color 0.2s" }}>
-          <Search size={18} strokeWidth={3} />
-        </div>
-        <div style={{ flex: 1, textAlign: "left", fontSize: 16, fontWeight: 700, color: "var(--fg, #111)" }}>
+        <Search
+          size={18}
+          strokeWidth={3}
+          style={{
+            color: open ? uvColor : "var(--fg-3)",
+            transition: "color 0.2s",
+            flexShrink: 0,
+          }}
+        />
+        <span
+          style={{
+            flex: 1,
+            textAlign: "left",
+            fontSize: 16,
+            fontWeight: 700,
+            color: "var(--fg)",
+          }}
+        >
           {displayCity}
-        </div>
-        <motion.div animate={{ rotate: open ? 180 : 0 }} style={{ color: "var(--fg-3, #9ca3af)" }}>
+        </span>
+        <motion.span
+          animate={{ rotate: open ? 180 : 0 }}
+          style={{ display: "flex", color: "var(--fg-3)" }}
+        >
           <ChevronDown size={20} strokeWidth={2.5} />
-        </motion.div>
+        </motion.span>
       </motion.button>
 
-      {/* DROPDOWN PANEL */}
+      {/* ── Dropdown ── */}
       <AnimatePresence>
         {open && (
           <motion.div
-            initial={{ opacity: 0, y: 10, scale: 0.98 }}
+            initial={{ opacity: 0, y: 8, scale: 0.98 }}
             animate={{ opacity: 1, y: 0, scale: 1 }}
-            exit={{ opacity: 0, y: 10, scale: 0.98 }}
+            exit={{ opacity: 0, y: 8, scale: 0.98 }}
             transition={{ type: "spring", stiffness: 400, damping: 30 }}
             style={{
-              position: "absolute", top: "calc(100% + 12px)", left: 0, right: 0, zIndex: 100,
-              background: "var(--bg-2, #fff)", borderRadius: 24, border: "1px solid var(--border, rgba(0,0,0,0.08))",
-              boxShadow: "0 20px 40px rgba(0,0,0,0.12), 0 0 0 1px rgba(0,0,0,0.02)", overflow: "hidden",
+              position: "absolute",
+              top: "calc(100% + 10px)",
+              left: 0,
+              right: 0,
+              zIndex: 600,
+              background: "var(--bg-2)",
+              borderRadius: 20,
+              border: "1px solid var(--border-2)",
+              boxShadow: "0 24px 56px rgba(0,0,0,0.5)",
+              overflow: "hidden",
             }}
           >
-            {/* TABS HEADER - Simplified to Postcode only */}
-            <div style={{ display: "flex", padding: "8px", background: "var(--bg-3, rgba(0,0,0,0.02))", borderBottom: "1px solid var(--border)", gap: 8 }}>
-              <div
-                style={{
-                  flex: 1, display: "flex", alignItems: "center", justifyContent: "center", gap: 8, padding: "10px",
-                  borderRadius: 16, border: "none", fontSize: 14, fontWeight: 700,
-                  background: "var(--bg-2, #fff)",
-                  color: "var(--fg, #111)",
-                  boxShadow: "0 2px 8px rgba(0,0,0,0.05)",
-                  transition: "all 0.2s",
-                }}
-              >
-                <Hash size={16} strokeWidth={2.5} style={{ color: uvColor }} />
-                Postcode Search
-              </div>
-            </div>
-
-            {/* INPUT AREA */}
-            <div style={{ padding: "16px 20px", display: "flex", alignItems: "center", borderBottom: "1px solid var(--border)" }}>
+            {/* Search input */}
+            <div
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: 10,
+                padding: "14px 18px",
+                borderBottom: "1px solid var(--border)",
+              }}
+            >
+              <Search
+                size={16}
+                strokeWidth={2.5}
+                style={{ color: uvColor, flexShrink: 0 }}
+              />
               <input
                 ref={inputRef}
-                type="number"
-                placeholder="e.g. 3053..."
+                type="text"
+                placeholder="City name or postcode…"
                 value={query}
                 onChange={(e) => setQuery(e.target.value)}
-                style={{ flex: 1, border: "none", background: "transparent", outline: "none", fontSize: 16, fontWeight: 600, color: "var(--fg, #111)", width: "100%", letterSpacing: 1 }}
+                style={{
+                  flex: 1,
+                  border: "none",
+                  background: "transparent",
+                  outline: "none",
+                  fontSize: 15,
+                  fontWeight: 600,
+                  color: "var(--fg)",
+                  fontFamily: "var(--font-display)",
+                }}
               />
-              {query && (
+              {loading && (
+                <Loader2
+                  size={16}
+                  style={{
+                    color: uvColor,
+                    animation: "spin 0.8s linear infinite",
+                    flexShrink: 0,
+                  }}
+                />
+              )}
+              {query && !loading && (
                 <motion.button
                   initial={{ opacity: 0, scale: 0.5 }}
                   animate={{ opacity: 1, scale: 1 }}
                   onClick={() => setQuery("")}
                   style={{
-                    display: "flex", alignItems: "center", justifyContent: "center", width: 28, height: 28,
-                    borderRadius: "50%", background: "var(--bg-3, rgba(0,0,0,0.05))", border: "none",
-                    cursor: "pointer", color: "var(--fg-2, #555)",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    width: 26,
+                    height: 26,
+                    borderRadius: "50%",
+                    background: "var(--bg-3)",
+                    border: "none",
+                    cursor: "pointer",
+                    color: "var(--fg-2)",
+                    flexShrink: 0,
                   }}
                 >
-                  <X size={16} strokeWidth={3} />
+                  <X size={14} strokeWidth={3} />
                 </motion.button>
               )}
             </div>
 
-            {/* RESULTS LIST */}
-            <div style={{ maxHeight: 280, overflowY: "auto", padding: 8 }}>
-              {loading ? (
-                <div style={{ padding: "24px", display: "flex", flexDirection: "column", gap: 12, alignItems: "center", justifyContent: "center", color: "var(--fg-3, #9ca3af)", fontSize: 14, fontWeight: 600 }}>
-                  <Loader2 size={24} style={{ color: uvColor, animation: "spin 1s linear infinite" }} />
-                  <span>Searching Postcodes...</span>
+            {/* Results */}
+            <div style={{ maxHeight: 320, overflowY: "auto", padding: 8 }}>
+              {/* Default state — show all ARPANSA cities */}
+              {showDefault && (
+                <>
+                  <div
+                    style={{
+                      padding: "6px 12px 8px",
+                      fontSize: 10,
+                      fontWeight: 700,
+                      letterSpacing: 2,
+                      color: "var(--fg-3)",
+                      textTransform: "uppercase",
+                      fontFamily: "var(--font-mono)",
+                      display: "flex",
+                      alignItems: "center",
+                      gap: 6,
+                    }}
+                  >
+                    <Radio size={10} style={{ color: uvColor }} />
+                    ARPANSA Live UV Stations
+                  </div>
+                  <motion.div
+                    initial="hidden"
+                    animate="show"
+                    variants={{
+                      hidden: { opacity: 0 },
+                      show: {
+                        opacity: 1,
+                        transition: { staggerChildren: 0.03 },
+                      },
+                    }}
+                    style={{ display: "flex", flexDirection: "column", gap: 2 }}
+                  >
+                    {ARPANSA_CITIES.map((c) => {
+                      const isSelected =
+                        (typeof city !== "string" ? city?.name : city) ===
+                        c.name;
+                      return (
+                        <ResultRow
+                          key={c.id}
+                          item={c}
+                          isSelected={isSelected}
+                          uvColor={uvColor}
+                          onSelect={handleSelect}
+                          badge={c.state}
+                        />
+                      );
+                    })}
+                  </motion.div>
+                  <div
+                    style={{
+                      padding: "10px 12px 4px",
+                      fontSize: 10,
+                      fontFamily: "var(--font-mono)",
+                      color: "var(--fg-3)",
+                      letterSpacing: 0.5,
+                    }}
+                  >
+                    Or type a postcode to search any Australian suburb
+                  </div>
+                </>
+              )}
+
+              {/* City name results */}
+              {cityResults.length > 0 && (
+                <>
+                  <div
+                    style={{
+                      padding: "6px 12px 8px",
+                      fontSize: 10,
+                      fontWeight: 700,
+                      letterSpacing: 2,
+                      color: "var(--fg-3)",
+                      textTransform: "uppercase",
+                      fontFamily: "var(--font-mono)",
+                      display: "flex",
+                      alignItems: "center",
+                      gap: 6,
+                    }}
+                  >
+                    <Radio size={10} style={{ color: uvColor }} />
+                    Live UV Stations
+                  </div>
+                  <motion.div
+                    initial="hidden"
+                    animate="show"
+                    variants={{
+                      hidden: { opacity: 0 },
+                      show: {
+                        opacity: 1,
+                        transition: { staggerChildren: 0.04 },
+                      },
+                    }}
+                    style={{ display: "flex", flexDirection: "column", gap: 2 }}
+                  >
+                    {cityResults.map((c) => {
+                      const isSelected =
+                        (typeof city !== "string" ? city?.name : city) ===
+                        c.name;
+                      return (
+                        <ResultRow
+                          key={c.id}
+                          item={c}
+                          isSelected={isSelected}
+                          uvColor={uvColor}
+                          onSelect={handleSelect}
+                          badge={c.state}
+                        />
+                      );
+                    })}
+                  </motion.div>
+                </>
+              )}
+
+              {/* Postcode results */}
+              {postcodeResults.length > 0 && (
+                <>
+                  <div
+                    style={{
+                      padding: "6px 12px 8px",
+                      fontSize: 10,
+                      fontWeight: 700,
+                      letterSpacing: 2,
+                      color: "var(--fg-3)",
+                      textTransform: "uppercase",
+                      fontFamily: "var(--font-mono)",
+                      display: "flex",
+                      alignItems: "center",
+                      gap: 6,
+                    }}
+                  >
+                    <MapPin size={10} style={{ color: uvColor }} />
+                    Postcode Match
+                  </div>
+                  <motion.div
+                    initial="hidden"
+                    animate="show"
+                    variants={{
+                      hidden: { opacity: 0 },
+                      show: {
+                        opacity: 1,
+                        transition: { staggerChildren: 0.04 },
+                      },
+                    }}
+                    style={{ display: "flex", flexDirection: "column", gap: 2 }}
+                  >
+                    {postcodeResults.map((c) => {
+                      const isSelected =
+                        (typeof city !== "string" ? city?.name : city) ===
+                        c.name;
+                      return (
+                        <ResultRow
+                          key={c.id}
+                          item={c}
+                          isSelected={isSelected}
+                          uvColor={uvColor}
+                          onSelect={handleSelect}
+                          badge={c.postcode}
+                          note="Nearest ARPANSA station used for UV"
+                        />
+                      );
+                    })}
+                  </motion.div>
+                </>
+              )}
+
+              {/* Empty state */}
+              {showEmpty && (
+                <div
+                  style={{
+                    padding: "28px 16px",
+                    textAlign: "center",
+                    color: "var(--fg-3)",
+                    fontSize: 13,
+                    fontWeight: 600,
+                  }}
+                >
+                  No results for "{query}"
+                  <div
+                    style={{
+                      fontSize: 11,
+                      marginTop: 6,
+                      color: "var(--fg-3)",
+                      fontFamily: "var(--font-mono)",
+                    }}
+                  >
+                    Try a city name (e.g. Sydney) or postcode (e.g. 3000)
+                  </div>
                 </div>
-              ) : results.length === 0 && query.length > 0 ? (
-                <div style={{ padding: "32px 16px", textAlign: "center", color: "var(--fg-3, #9ca3af)", fontSize: 14, fontWeight: 600 }}>
-                  No Postcode found for "{query}"
-                </div>
-              ) : results.length === 0 ? (
-                <div style={{ padding: "32px 16px", textAlign: "center", color: "var(--fg-3, #9ca3af)", fontSize: 14, fontWeight: 600 }}>
-                  Type to search for an Australian postcode...
-                </div>
-              ) : (
-                <motion.div initial="hidden" animate="show" variants={{ hidden: { opacity: 0 }, show: { opacity: 1, transition: { staggerChildren: 0.05 } } }} style={{ display: "flex", flexDirection: "column", gap: 4 }}>
-                  {results.map((res) => {
-                    const isSelected = typeof city !== "string" && city?.name === res.name;
-                    return (
-                      <motion.button
-                        variants={{ hidden: { opacity: 0, y: 10 }, show: { opacity: 1, y: 0 } }}
-                        key={`${res.id}`}
-                        onMouseDown={(e) => { e.preventDefault(); handleSelect(res); }}
-                        style={{
-                          display: "flex", alignItems: "center", gap: 12, width: "100%", padding: "14px 16px",
-                          borderRadius: 16, border: "none", cursor: "pointer", textAlign: "left",
-                          background: isSelected ? `${uvColor}12` : "transparent",
-                          color: isSelected ? uvColor : "var(--fg, #111)", transition: "background 0.2s",
-                        }}
-                        onMouseEnter={(e) => { if (!isSelected) e.currentTarget.style.background = "var(--bg-3, rgba(0,0,0,0.03))"; }}
-                        onMouseLeave={(e) => { if (!isSelected) e.currentTarget.style.background = "transparent"; }}
-                      >
-                        <div style={{ width: 10, height: 10, borderRadius: "50%", background: isSelected ? uvColor : "var(--border, rgba(0,0,0,0.15))", flexShrink: 0 }} />
-                        <div style={{ flex: 1, overflow: "hidden" }}>
-                          <div style={{ fontSize: 15, fontWeight: 700, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{res.name}</div>
-                          <div style={{ fontSize: 12, color: "var(--fg-3, #9ca3af)", marginTop: 2, fontWeight: 500 }}>
-                            {res.admin1 ? `${res.admin1}, ` : ""}Australia {res.postcode && `• ${res.postcode}`}
-                          </div>
-                        </div>
-                        {isSelected && <div style={{ display: "flex", color: uvColor, flexShrink: 0 }}><Check size={18} strokeWidth={3} /></div>}
-                      </motion.button>
-                    );
-                  })}
-                </motion.div>
               )}
             </div>
           </motion.div>
         )}
       </AnimatePresence>
     </div>
+  );
+}
+
+function ResultRow({ item, isSelected, uvColor, onSelect, badge, note }) {
+  return (
+    <motion.button
+      variants={{ hidden: { opacity: 0, y: 6 }, show: { opacity: 1, y: 0 } }}
+      onMouseDown={(e) => {
+        e.preventDefault();
+        onSelect(item);
+      }}
+      style={{
+        display: "flex",
+        alignItems: "center",
+        gap: 12,
+        width: "100%",
+        padding: "12px 14px",
+        borderRadius: 14,
+        border: "none",
+        cursor: "pointer",
+        textAlign: "left",
+        background: isSelected ? `${uvColor}15` : "transparent",
+        color: isSelected ? uvColor : "var(--fg)",
+        transition: "background 0.15s",
+      }}
+      onMouseEnter={(e) => {
+        if (!isSelected) e.currentTarget.style.background = "var(--bg-3)";
+      }}
+      onMouseLeave={(e) => {
+        if (!isSelected) e.currentTarget.style.background = "transparent";
+      }}
+    >
+      <div
+        style={{
+          width: 8,
+          height: 8,
+          borderRadius: "50%",
+          flexShrink: 0,
+          background: isSelected ? uvColor : "var(--border-2)",
+          boxShadow: isSelected ? `0 0 6px ${uvColor}` : "none",
+          transition: "all 0.2s",
+        }}
+      />
+      <div style={{ flex: 1, minWidth: 0 }}>
+        <div
+          style={{
+            fontSize: 14,
+            fontWeight: 700,
+            whiteSpace: "nowrap",
+            overflow: "hidden",
+            textOverflow: "ellipsis",
+          }}
+        >
+          {item.name}
+        </div>
+        {note && (
+          <div
+            style={{
+              fontSize: 10,
+              color: "var(--fg-3)",
+              marginTop: 1,
+              fontFamily: "var(--font-mono)",
+            }}
+          >
+            {note}
+          </div>
+        )}
+      </div>
+      {badge && (
+        <span
+          style={{
+            fontSize: 10,
+            fontWeight: 700,
+            fontFamily: "var(--font-mono)",
+            padding: "2px 8px",
+            borderRadius: 6,
+            background: isSelected ? `${uvColor}20` : "var(--bg-3)",
+            color: isSelected ? uvColor : "var(--fg-3)",
+            flexShrink: 0,
+          }}
+        >
+          {badge}
+        </span>
+      )}
+      {isSelected && (
+        <div style={{ color: uvColor, flexShrink: 0 }}>
+          <Check size={16} strokeWidth={3} />
+        </div>
+      )}
+    </motion.button>
   );
 }
