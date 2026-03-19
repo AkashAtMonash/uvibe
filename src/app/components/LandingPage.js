@@ -1,3 +1,4 @@
+// src/app/components/LandingPage.js
 "use client";
 
 import { useState, useEffect } from "react";
@@ -32,6 +33,137 @@ const STATS = [
   { val: "UV 11+", label: "Extreme UV levels reached regularly in Australia" },
 ];
 
+// ── Self-contained UV ring for the landing card ───────────────────────────────
+function UVRing({ uv, color, size = 240, loading = false }) {
+  const strokeW = 9;
+  const r = (size - strokeW * 2) / 2;
+  const circ = 2 * Math.PI * r;
+  const pct = Math.min(uv / 13, 1);
+  const [drawn, setDrawn] = useState(0);
+
+  useEffect(() => {
+    if (loading) {
+      setDrawn(0);
+      return;
+    }
+    const t = setTimeout(() => setDrawn(pct), 120);
+    return () => clearTimeout(t);
+  }, [pct, loading]);
+
+  return (
+    <div
+      style={{
+        position: "relative",
+        width: size,
+        height: size,
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+      }}
+    >
+      <svg
+        width={size}
+        height={size}
+        style={{
+          position: "absolute",
+          transform: "rotate(-90deg)",
+          overflow: "visible",
+        }}
+      >
+        {/* Track */}
+        <circle
+          cx={size / 2}
+          cy={size / 2}
+          r={r}
+          fill="none"
+          stroke="currentColor"
+          strokeOpacity="0.08"
+          strokeWidth={strokeW}
+        />
+        {/* Glow */}
+        <circle
+          cx={size / 2}
+          cy={size / 2}
+          r={r}
+          fill="none"
+          stroke={color}
+          strokeWidth={strokeW + 5}
+          strokeLinecap="round"
+          opacity="0.12"
+          strokeDasharray={`${circ * drawn} ${circ * (1 - drawn)}`}
+          style={{
+            transition: "stroke-dasharray 1.3s cubic-bezier(0.22,1,0.36,1)",
+          }}
+        />
+        {/* Arc */}
+        <circle
+          cx={size / 2}
+          cy={size / 2}
+          r={r}
+          fill="none"
+          stroke={color}
+          strokeWidth={strokeW}
+          strokeLinecap="round"
+          strokeDasharray={`${circ * drawn} ${circ * (1 - drawn)}`}
+          style={{
+            transition:
+              "stroke-dasharray 1.3s cubic-bezier(0.22,1,0.36,1), stroke 0.6s",
+            filter: `drop-shadow(0 0 8px ${color}aa)`,
+          }}
+        />
+      </svg>
+      {/* Centre */}
+      <div style={{ textAlign: "center", position: "relative", zIndex: 1 }}>
+        {loading ? (
+          <div
+            style={{
+              width: 24,
+              height: 24,
+              borderRadius: "50%",
+              border: `3px solid ${color}40`,
+              borderTopColor: color,
+              animation: "lpSpin 0.8s linear infinite",
+              margin: "0 auto",
+            }}
+          />
+        ) : (
+          <>
+            <div
+              style={{
+                fontSize: 58,
+                fontWeight: 900,
+                letterSpacing: -3,
+                lineHeight: 1,
+                color,
+                transition: "color 0.6s",
+              }}
+            >
+              {uv.toFixed(1)}
+            </div>
+            <div
+              style={{
+                fontSize: 11,
+                fontWeight: 800,
+                letterSpacing: 3,
+                textTransform: "uppercase",
+                color,
+                opacity: 0.75,
+                marginTop: 4,
+                fontFamily: "var(--font-mono, monospace)",
+              }}
+            >
+              UV Index
+            </div>
+          </>
+        )}
+      </div>
+      <style>{`@keyframes lpSpin { to { transform: rotate(360deg); } }`}</style>
+    </div>
+  );
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+
 export default function LandingPage({ onEnter }) {
   const [uv, setUv] = useState(0);
   const [loading, setLoading] = useState(true);
@@ -52,7 +184,6 @@ export default function LandingPage({ onEnter }) {
       }
       setLoading(false);
     };
-
     fetchUV();
   }, []);
 
@@ -163,7 +294,6 @@ export default function LandingPage({ onEnter }) {
             </span>
           </div>
         </div>
-
         <div
           style={{
             display: "inline-flex",
@@ -304,7 +434,6 @@ export default function LandingPage({ onEnter }) {
             >
               Check My UV Index →
             </button>
-
             <button
               className="btn btn-outline btn-lg"
               onClick={() =>
@@ -323,12 +452,7 @@ export default function LandingPage({ onEnter }) {
 
           <div
             className="anim-fade-up"
-            style={{
-              display: "flex",
-              flexWrap: "wrap",
-              gap: 10,
-              marginTop: 4,
-            }}
+            style={{ display: "flex", flexWrap: "wrap", gap: 10, marginTop: 4 }}
           >
             {["ARPANSA Data", "Australia Focused", "Actionable Alerts"].map(
               (item) => (
@@ -351,6 +475,7 @@ export default function LandingPage({ onEnter }) {
           </div>
         </div>
 
+        {/* ── UV Card ── */}
         <div
           className="anim-scale-in"
           style={{
@@ -410,16 +535,11 @@ export default function LandingPage({ onEnter }) {
                   {city} · Live UV
                 </div>
                 <div
-                  style={{
-                    fontSize: 20,
-                    fontWeight: 700,
-                    color: "var(--fg)",
-                  }}
+                  style={{ fontSize: 20, fontWeight: 700, color: "var(--fg)" }}
                 >
                   Current UV Conditions
                 </div>
               </div>
-
               <div
                 style={{
                   padding: "8px 10px",
@@ -431,7 +551,7 @@ export default function LandingPage({ onEnter }) {
                   fontWeight: 700,
                 }}
               >
-                {loading ? "Loading..." : lv.label}
+                {loading ? "Loading..." : lv.name}
               </div>
             </div>
 
@@ -491,68 +611,33 @@ export default function LandingPage({ onEnter }) {
                 gap: 10,
               }}
             >
-              <div
-                style={{
-                  borderRadius: 16,
-                  padding: "12px 10px",
-                  background: "rgba(255,255,255,0.03)",
-                  border: "1px solid var(--border)",
-                  textAlign: "center",
-                }}
-              >
+              {[
+                ["Source", "ARPANSA"],
+                ["Refresh", "~5 min"],
+                ["Location", city],
+              ].map(([label, val]) => (
                 <div
+                  key={label}
                   style={{
-                    fontSize: 11,
-                    color: "var(--fg-3)",
-                    marginBottom: 6,
+                    borderRadius: 16,
+                    padding: "12px 10px",
+                    background: "rgba(255,255,255,0.03)",
+                    border: "1px solid var(--border)",
+                    textAlign: "center",
                   }}
                 >
-                  Source
+                  <div
+                    style={{
+                      fontSize: 11,
+                      color: "var(--fg-3)",
+                      marginBottom: 6,
+                    }}
+                  >
+                    {label}
+                  </div>
+                  <div style={{ fontSize: 13, fontWeight: 600 }}>{val}</div>
                 </div>
-                <div style={{ fontSize: 13, fontWeight: 600 }}>ARPANSA</div>
-              </div>
-
-              <div
-                style={{
-                  borderRadius: 16,
-                  padding: "12px 10px",
-                  background: "rgba(255,255,255,0.03)",
-                  border: "1px solid var(--border)",
-                  textAlign: "center",
-                }}
-              >
-                <div
-                  style={{
-                    fontSize: 11,
-                    color: "var(--fg-3)",
-                    marginBottom: 6,
-                  }}
-                >
-                  Refresh
-                </div>
-                <div style={{ fontSize: 13, fontWeight: 600 }}>~5 min</div>
-              </div>
-
-              <div
-                style={{
-                  borderRadius: 16,
-                  padding: "12px 10px",
-                  background: "rgba(255,255,255,0.03)",
-                  border: "1px solid var(--border)",
-                  textAlign: "center",
-                }}
-              >
-                <div
-                  style={{
-                    fontSize: 11,
-                    color: "var(--fg-3)",
-                    marginBottom: 6,
-                  }}
-                >
-                  Location
-                </div>
-                <div style={{ fontSize: 13, fontWeight: 600 }}>{city}</div>
-              </div>
+              ))}
             </div>
 
             <div
@@ -608,11 +693,7 @@ export default function LandingPage({ onEnter }) {
             </div>
             <div
               className="landing-stat-label"
-              style={{
-                color: "var(--fg-2)",
-                lineHeight: 1.6,
-                fontSize: 14,
-              }}
+              style={{ color: "var(--fg-2)", lineHeight: 1.6, fontSize: 14 }}
             >
               {s.label}
             </div>
@@ -661,7 +742,6 @@ export default function LandingPage({ onEnter }) {
             >
               {f.icon}
             </div>
-
             <div
               className="landing-feature-title"
               style={{
@@ -673,14 +753,9 @@ export default function LandingPage({ onEnter }) {
             >
               {f.title}
             </div>
-
             <div
               className="landing-feature-desc"
-              style={{
-                color: "var(--fg-2)",
-                lineHeight: 1.7,
-                fontSize: 14.5,
-              }}
+              style={{ color: "var(--fg-2)", lineHeight: 1.7, fontSize: 14.5 }}
             >
               {f.desc}
             </div>
@@ -703,14 +778,10 @@ export default function LandingPage({ onEnter }) {
       >
         <div
           className="landing-footer-text"
-          style={{
-            color: "var(--fg-3)",
-            lineHeight: 1.6,
-          }}
+          style={{ color: "var(--fg-3)", lineHeight: 1.6 }}
         >
           UV data courtesy of ARPANSA · Weather context by OpenWeather
         </div>
-
         <button
           className="btn btn-uv"
           onClick={onEnter}

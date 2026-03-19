@@ -1,4 +1,3 @@
-// src/app/page.js
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
@@ -114,14 +113,21 @@ export default function Page() {
         setGeoGranted(granted ?? false);
         setScreen("app");
       } else {
-        // First visit — fire browser prompt immediately, no blocking modal
-        requestGeo();
+        // First visit — go straight to app on mobile, landing on desktop
+        // requestGeo fires in a separate effect once screen is set (avoids stale closure crash)
         setScreen(window.innerWidth < 1100 ? "app" : "landing");
       }
     } catch {
-      setScreen("landing");
+      setScreen("app"); // safe fallback — always show app, never blank
     }
   }, []);
+
+  // Fire geolocation only on first visit, after screen is set and requestGeo is stable
+  useEffect(() => {
+    if (screen === "loading") return;
+    const hasLocation = localStorage.getItem("uvibe_location");
+    if (!hasLocation) requestGeo();
+  }, [screen]);
 
   useEffect(() => {
     if (screen === "loading") return;
