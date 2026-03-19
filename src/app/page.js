@@ -1,4 +1,3 @@
-// src/app/page.js
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
@@ -114,14 +113,12 @@ export default function Page() {
         setGeoGranted(granted ?? false);
         setScreen("app");
       } else {
-        // First visit or after reset — always go straight to app with Melbourne default.
-        // Landing page is only shown when there IS a saved location and user navigates back.
         setCity(MELBOURNE);
         setScreen("app");
       }
     } catch {
       setCity(MELBOURNE);
-      setScreen("app"); // safe fallback — always show app, never blank
+      setScreen("app");
     }
   }, []);
 

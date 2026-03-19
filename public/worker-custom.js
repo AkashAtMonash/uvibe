@@ -6,8 +6,8 @@ self.addEventListener("push", function (event) {
     const title = data.title || "UVibe Alert";
     const options = {
       body: data.body || "Check your UV risk.",
-      icon: data.icon || "/icons/icon-192.png",
-      badge: "/icons/icon-192.png",
+      icon: data.icon || "/icons/icon-256.png",
+      badge: "/icons/icon-256.png",
       vibrate: data.urgent ? [200, 100, 200, 100, 200] : [100, 50, 100],
       data: {
         url: data.url || "/",
@@ -45,5 +45,30 @@ self.addEventListener("notificationclick", function (event) {
           return clients.openWindow(urlToOpen);
         }
       }),
+  );
+});
+
+self.addEventListener("message", (event) => {
+  if (event.data?.type !== "REMINDER_ALARM") return;
+
+  const { title, body } = event.data;
+
+  event.waitUntil(
+    self.registration.showNotification(
+      title ?? "⏱ Time to Reapply Sunscreen!",
+      {
+        body: body ?? "Reapply your sunscreen now to stay protected.",
+        icon: "/icons/icon-256.png",
+        badge: "/icons/icon-256.png",
+        tag: "uvibe-reminder",
+        vibrate: [300, 100, 300, 100, 300],
+        requireInteraction: true,
+        data: { url: "/" },
+        actions: [
+          { action: "open", title: "Open UVibe" },
+          { action: "dismiss", title: "Dismiss" },
+        ],
+      },
+    ),
   );
 });

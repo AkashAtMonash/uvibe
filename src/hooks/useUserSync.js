@@ -10,11 +10,15 @@ function urlBase64ToUint8Array(base64String) {
   if (!base64String) throw new Error("NEXT_PUBLIC_VAPID_PUBLIC_KEY is not set");
   try {
     const padding = "=".repeat((4 - (base64String.length % 4)) % 4);
-    const base64 = (base64String + padding).replace(/-/g, "+").replace(/_/g, "/");
+    const base64 = (base64String + padding)
+      .replace(/-/g, "+")
+      .replace(/_/g, "/");
     const raw = atob(base64);
     return new Uint8Array([...raw].map((c) => c.charCodeAt(0)));
-  } catch (err) {
-    throw new Error("Malformed VAPID Configuration. Check your .env key.");
+  } catch {
+    throw new Error(
+      "Malformed VAPID key — check NEXT_PUBLIC_VAPID_PUBLIC_KEY in .env",
+    );
   }
 }
 
@@ -25,16 +29,13 @@ async function registerSWAndSubscribe(vapidKey) {
     throw new Error("Push not supported in this browser");
   if (!vapidKey)
     throw new Error(
-      "VAPID key missing — add NEXT_PUBLIC_VAPID_PUBLIC_KEY to Vercel env vars",
+      "VAPID key missing — add NEXT_PUBLIC_VAPID_PUBLIC_KEY to env vars",
     );
 
-  const reg = await navigator.serviceWorker.register("/uvibe-sw.js");
+  const reg = await navigator.serviceWorker.register("/sw.js");
   await navigator.serviceWorker.ready;
 
-  // Check for existing subscription first
   let sub = await reg.pushManager.getSubscription();
-
-  // If no subscription or it's expired, create a new one
   if (!sub) {
     sub = await reg.pushManager.subscribe({
       userVisibleOnly: true,
@@ -62,7 +63,6 @@ export function useUserSync() {
     if (permission !== "granted")
       return { error: "Notification permission denied" };
 
-    // Re-use existing token if present, create new one if not
     let token = localStorage.getItem(TOKEN_KEY);
     const isNewToken = !token;
     if (!token) token = `uvibe_${crypto.randomUUID()}`;
@@ -80,15 +80,15 @@ export function useUserSync() {
         }),
       });
       if (!userRes.ok) {
-        const errorData = await userRes.json();
-        throw new Error(errorData.error || "Failed to save user in database");
+        const err = await userRes.json();
+        throw new Error(err.error || "Failed to save user in database");
       }
 
-      // 2. Register SW and get push subscription
+      // 2. Register SW + get push subscription
       const vapidKey = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY;
       const subscription = await registerSWAndSubscribe(vapidKey);
 
-      // 3. Save subscription endpoint to DB
+      // 3. Save subscription to DB
       const subRes = await fetch("/api/push-subscription", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -99,22 +99,24 @@ export function useUserSync() {
       });
       if (!subRes.ok) throw new Error("Failed to save push subscription");
 
-      // 4. Persist token
+      // 4. Persist token locally
       localStorage.setItem(TOKEN_KEY, token);
       localStorage.setItem(SW_REG_KEY, "true");
       setPushToken(token);
       setSynced(true);
 
-      // 5. Save city subscription if new user
+      // 5. Save city subscription for new users
       if (isNewToken) {
-        const savedLocation = localStorage.getItem(LOCATION_KEY);
-        if (savedLocation) {
-          const { city } = JSON.parse(savedLocation);
+        const savedLoc = localStorage.getItem(LOCATION_KEY);
+        if (savedLoc) {
+          const { city } = JSON.parse(savedLoc);
+          const cityName =
+            typeof city === "string" ? city : (city?.name ?? "Melbourne");
           await fetch("/api/subscription", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ pushToken: token, cityName: city }),
-          });
+            body: JSON.stringify({ pushToken: token, cityName }),
+          }).catch(() => {});
         }
       }
 
@@ -173,15 +175,12 @@ export function useUserSync() {
     const token = localStorage.getItem(TOKEN_KEY);
     if (!token) return { error: "No push token — toggle UV Alerts ON first" };
 
-    // Always attempt to register SW and save subscription before sending
-    // This handles the case where user exists in DB but subscription was never saved
     try {
       const vapidKey = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY;
       if (!vapidKey)
         return { error: "NEXT_PUBLIC_VAPID_PUBLIC_KEY not set in .env.local" };
 
       const subscription = await registerSWAndSubscribe(vapidKey);
-
       await fetch("/api/push-subscription", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -190,8 +189,8 @@ export function useUserSync() {
           subscription: subscription.toJSON(),
         }),
       });
-    } catch (swErr) {
-      return { error: `SW registration failed: ${swErr.message}` };
+    } catch (err) {
+      return { error: `SW registration failed: ${err.message}` };
     }
 
     try {
