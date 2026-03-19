@@ -114,12 +114,14 @@ export default function Page() {
         setGeoGranted(granted ?? false);
         setScreen("app");
       } else {
+        // First visit or after reset — always go straight to app with Melbourne default.
+        // Landing page is only shown when there IS a saved location and user navigates back.
         setCity(MELBOURNE);
         setScreen("app");
       }
     } catch {
       setCity(MELBOURNE);
-      setScreen("app");
+      setScreen("app"); // safe fallback — always show app, never blank
     }
   }, []);
 
@@ -139,7 +141,11 @@ export default function Page() {
     } else {
       doc.classList.remove("dark");
     }
-    doc.setAttribute("data-contrast", contrast ? "high" : "");
+    if (contrast) {
+      doc.setAttribute("data-contrast", "high");
+    } else {
+      doc.removeAttribute("data-contrast");
+    }
     localStorage.setItem("uvibe_theme", theme);
     localStorage.setItem("uvibe_contrast", contrast.toString());
   }, [theme, contrast, screen]);
