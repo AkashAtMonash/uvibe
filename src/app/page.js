@@ -1,3 +1,4 @@
+// src/app/page.js
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
@@ -113,11 +114,13 @@ export default function Page() {
         setGeoGranted(granted ?? false);
         setScreen("app");
       } else {
-        // First visit — go straight to app on mobile, landing on desktop
-        // requestGeo fires in a separate effect once screen is set (avoids stale closure crash)
+        // First visit or after reset — go straight to app, set Melbourne as default immediately
+        // so the screen is never blank while waiting for geo permission
+        setCity(MELBOURNE);
         setScreen(window.innerWidth < 1100 ? "app" : "landing");
       }
     } catch {
+      setCity(MELBOURNE);
       setScreen("app"); // safe fallback — always show app, never blank
     }
   }, []);
