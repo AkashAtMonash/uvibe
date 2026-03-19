@@ -114,14 +114,23 @@ export default function Page() {
         setGeoGranted(granted ?? false);
         setScreen("app");
       } else {
-        // First visit — fire browser prompt immediately, no blocking modal
-        requestGeo();
-        setScreen(window.innerWidth < 1100 ? "app" : "landing");
+        // First visit or after reset — always go straight to app with Melbourne default.
+        // Landing page is only shown when there IS a saved location and user navigates back.
+        setCity(MELBOURNE);
+        setScreen("app");
       }
     } catch {
-      setScreen("landing");
+      setCity(MELBOURNE);
+      setScreen("app"); // safe fallback — always show app, never blank
     }
   }, []);
+
+  // Fire geolocation only on first visit, after screen is set and requestGeo is stable
+  useEffect(() => {
+    if (screen === "loading") return;
+    const hasLocation = localStorage.getItem("uvibe_location");
+    if (!hasLocation) requestGeo();
+  }, [screen]);
 
   useEffect(() => {
     if (screen === "loading") return;
@@ -132,7 +141,11 @@ export default function Page() {
     } else {
       doc.classList.remove("dark");
     }
-    doc.setAttribute("data-contrast", contrast ? "high" : "");
+    if (contrast) {
+      doc.setAttribute("data-contrast", "high");
+    } else {
+      doc.removeAttribute("data-contrast");
+    }
     localStorage.setItem("uvibe_theme", theme);
     localStorage.setItem("uvibe_contrast", contrast.toString());
   }, [theme, contrast, screen]);
